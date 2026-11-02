@@ -15,14 +15,6 @@ export const myStatus = () => callMethod<MyStatus>(`${API}.enrolment.my_status`,
 export const registerDevice = (publicKey: string, label: string) =>
   callMethod<{ device: string }>(`${API}.enrolment.register_device`, { public_key: publicKey, label });
 
-export const enrolFace = (device: string, embedding: string, modelVersion: string) =>
-  callMethod<{ status: Exclude<TemplateStatus, null> }>(`${API}.enrolment.enrol_face`, {
-    device,
-    embedding,
-    model_version: modelVersion,
-    consent: true,
-  });
-
 export const getChallenge = (device: string) =>
   callMethod<{ nonce: string; expires_in: number }>(`${API}.checkin.get_challenge`, { device });
 
