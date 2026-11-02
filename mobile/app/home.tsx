@@ -23,8 +23,8 @@ interface StatusCopy {
 const STATUS: Record<'Active' | 'Pending' | 'Revoked' | 'None' | 'Loading' | 'NoEmployee', StatusCopy> = {
   Active: { icon: 'shield-checkmark-outline', tone: 'success', title: 'Face enrolled', detail: 'You can check in and out.' },
   Pending: { icon: 'hourglass-outline', tone: 'warning', title: 'Waiting for HR approval', detail: 'Check in opens once HR approves your face.' },
-  Revoked: { icon: 'alert-circle', tone: 'danger', title: 'Face access revoked', detail: 'Ask HR to restore it, then enrol again.' },
-  None: { icon: 'scan-outline', tone: 'accent', title: 'Face not enrolled', detail: 'Enrol your face to start checking in.' },
+  Revoked: { icon: 'alert-circle', tone: 'danger', title: 'Face access revoked', detail: 'Ask HR to enrol your face again.' },
+  None: { icon: 'scan-outline', tone: 'accent', title: 'Face not enrolled', detail: 'HR enrols your face in person. Ask them when you are at work.' },
   Loading: { icon: 'time-outline', tone: 'neutral', title: 'Checking your status…', detail: ' ' },
   NoEmployee: { icon: 'person-outline', tone: 'neutral', title: 'No employee linked', detail: 'This login can manage faces but cannot check in.' },
 };
@@ -97,9 +97,6 @@ export default function Home() {
       )}
 
       <RowGroup>
-        {!noEmployee && (
-          <Row icon="scan-outline" label={status?.template ? 'Update my face' : 'Enrol my face'} detail="Takes about 20 seconds" onPress={() => router.push('/enrol')} />
-        )}
         {canReview && !noEmployee && (
           <Row icon="people-outline" label="Review employee faces" detail="Approve, revoke or enrol" badge={reviewBadge} onPress={() => router.push('/review')} />
         )}

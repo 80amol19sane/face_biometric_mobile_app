@@ -5,7 +5,7 @@ export const MODEL_INPUT_SIZE = 112;
 export const MODEL_PIXEL_MEAN = 128;
 export const MODEL_PIXEL_STD = 128;
 
-/** Frames averaged into the enrolled template. */
+/** Frames averaged into the enrolled template (HR enrols; employees cannot). */
 export const ENROL_FRAMES = 3;
 
 /** How long a person gets to finish the liveness challenge and a straight-on capture. */
