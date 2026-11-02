@@ -23,7 +23,7 @@ describe('assessFrontal', () => {
     ['no_face', [], 1000, 1300],
     ['many_faces', [face(), face()], 1000, 1300],
     ['too_small', [face({ frame: { left: 450, top: 600, width: 100, height: 120 } })], 1000, 1300],
-    ['off_centre', [face({ frame: { left: 0, top: 400, width: 400, height: 500 } })], 1000, 1300],
+    ['off_centre', [face({ frame: { left: 0, top: 400, width: 250, height: 300 } })], 1000, 1300],
     ['not_frontal', [face({ rotationY: 25 })], 1000, 1300],
     ['eyes_closed', [face({ leftEyeOpenProbability: 0.1 })], 1000, 1300],
   ] as const)('rejects %s', (reason, faces, w, h) => {
