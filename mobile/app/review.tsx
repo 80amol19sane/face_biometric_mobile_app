@@ -82,6 +82,11 @@ export default function Review() {
               </View>
               <Chip label={item.status} tone={TONE[item.status]} />
             </View>
+            <Button
+              label={item.status === 'Not enrolled' ? 'Enrol face' : 'Enrol face again'}
+              variant={item.status === 'Not enrolled' ? 'primary' : 'secondary'}
+              onPress={() => router.push({ pathname: '/enrol-employee', params: { employee: item.employee, name: item.employeeName } })}
+            />
             {item.status === 'Pending' && <Button label="Approve" busy={working === item.employee} onPress={() => act(item, 'approve')} />}
             {(item.status === 'Active' || item.status === 'Pending') && (
               <Button label="Revoke" variant="secondary" disabled={working === item.employee} onPress={() => confirmRevoke(item)} />

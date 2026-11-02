@@ -4,7 +4,8 @@ import { ApiError } from '../src/api/http';
 import { checkIn } from '../src/api/checkin';
 import { Body, Button, Screen, Title } from '../src/components/ui';
 import { FaceCamera } from '../src/components/FaceCamera';
-import { storedDevice } from '../src/device/registry';
+import { myStatus } from '../src/api/faceBiometric';
+import { ensureDevice } from '../src/device/registry';
 import type { LogType } from '../src/lib/signing';
 import { useSession } from '../src/state/session';
 
@@ -25,8 +26,9 @@ export default function Checkin() {
   const submit = async (embedding: Float32Array) => {
     setStep({ name: 'sending' });
     try {
-      const device = user && (await storedDevice(user));
-      if (!user || !device) throw new ApiError('This phone is not enrolled yet. Enrol your face first.', 'server');
+      if (!user) throw new ApiError('Please sign in again.', 'server');
+      // First check-in on this phone (e.g. HR enrolled the face): register this phone's key now.
+      const device = await ensureDevice(user, await myStatus());
       const result = await checkIn(user, device, logType, embedding);
       setStep({ name: 'done', time: result.time });
     } catch (e) {
