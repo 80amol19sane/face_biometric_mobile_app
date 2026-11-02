@@ -60,7 +60,8 @@
           }
         }
       ],
-      "react-native-fast-tflite"
+      "react-native-fast-tflite",
+      "./plugins/withReleaseSigning.js"
     ],
     "extra": {
       "router": {}
