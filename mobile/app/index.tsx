@@ -6,10 +6,11 @@ import { currentUser } from '../src/api/session';
 import { Button } from '../src/components/ui';
 import { Result } from '../src/components/Result';
 import { useSession } from '../src/state/session';
-import { color } from '../src/theme';
+import { useTheme } from '../src/theme';
 
 /** Decides where to start: server address, then login, then home. */
 export default function Boot() {
+  const { color } = useTheme();
   const { setUser } = useSession();
   const [error, setError] = useState<string | null>(null);
   const [attempt, setAttempt] = useState(0);

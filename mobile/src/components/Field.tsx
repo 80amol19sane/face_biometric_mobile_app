@@ -1,15 +1,17 @@
 import { useState } from 'react';
-import { StyleSheet, Text, TextInput, View, type TextInputProps } from 'react-native';
-import { color, radius, space, type } from '../theme';
+import { Text, TextInput, View, type TextInputProps } from 'react-native';
+import { radius, space, styleFactory, type, useStyles, useTheme } from '../theme';
 
 export function Field({ label, ...input }: { label: string } & TextInputProps) {
+  const { color } = useTheme();
+  const styles = useStyles(createStyles);
   const [focused, setFocused] = useState(false);
   return (
     <View style={styles.field}>
       <Text style={styles.label}>{label}</Text>
       <TextInput
         style={[styles.input, focused && styles.focused]}
-        placeholderTextColor="#98A2B3"
+        placeholderTextColor={color.faint}
         autoCapitalize="none"
         autoCorrect={false}
         accessibilityLabel={label}
@@ -21,7 +23,7 @@ export function Field({ label, ...input }: { label: string } & TextInputProps) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = styleFactory((color) => ({
   field: { gap: space.sm },
   label: { ...type.label, color: color.ink },
   input: {
@@ -35,4 +37,4 @@ const styles = StyleSheet.create({
     color: color.ink,
   },
   focused: { borderColor: color.accent },
-});
+}));

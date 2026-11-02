@@ -7,12 +7,14 @@ import { ApiError } from '../src/api/http';
 import { approveFace, listFaceReview, revokeFace, type ReviewRow, type ReviewStatus } from '../src/api/review';
 import { FaceRow } from '../src/components/FaceRow';
 import { Body, Caption, Heading } from '../src/components/ui';
-import { color, radius, space, type } from '../src/theme';
+import { radius, space, styleFactory, type, useStyles, useTheme } from '../src/theme';
 
 type Filter = 'All' | ReviewStatus;
 const FILTERS: Filter[] = ['All', 'Pending', 'Not enrolled', 'Active', 'Revoked'];
 
 export default function Review() {
+  const { color } = useTheme();
+  const styles = useStyles(createStyles);
   const [rows, setRows] = useState<ReviewRow[] | null>(null);
   const [filter, setFilter] = useState<Filter>('Not enrolled');
   const [query, setQuery] = useState('');
@@ -71,7 +73,7 @@ export default function Review() {
 
       <View style={styles.search}>
         <Ionicons name="search" size={18} color={color.muted} />
-        <TextInput style={styles.searchInput} value={query} onChangeText={setQuery} placeholder="Search name or ID" placeholderTextColor="#98A2B3" autoCorrect={false} accessibilityLabel="Search employees" />
+        <TextInput style={styles.searchInput} value={query} onChangeText={setQuery} placeholder="Search name or ID" placeholderTextColor={color.faint} autoCorrect={false} accessibilityLabel="Search employees" />
       </View>
 
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterBar} contentContainerStyle={styles.filters}>
@@ -105,7 +107,7 @@ export default function Review() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = styleFactory((color) => ({
   screen: { flex: 1, backgroundColor: color.surface },
   header: { flexDirection: 'row', alignItems: 'center', gap: space.md, padding: space.md },
   back: { width: 44, height: 44, borderRadius: 22, backgroundColor: color.bg, alignItems: 'center', justifyContent: 'center' },
@@ -120,4 +122,4 @@ const styles = StyleSheet.create({
   pad: { padding: space.md },
   list: { paddingHorizontal: space.md, paddingBottom: space.xl },
   separator: { height: StyleSheet.hairlineWidth, backgroundColor: color.line },
-});
+}));

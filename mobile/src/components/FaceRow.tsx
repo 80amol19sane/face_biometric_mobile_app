@@ -1,7 +1,7 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 import type { ReviewRow, ReviewStatus } from '../api/review';
 import { enrolmentNote } from '../lib/enrolment';
-import { color, space, type, type Tone } from '../theme';
+import { space, styleFactory, type, useStyles, type Tone } from '../theme';
 import { Avatar } from './Avatar';
 import { Button, Pill } from './ui';
 
@@ -17,6 +17,7 @@ interface FaceRowProps {
 
 /** One employee: avatar, name, status, then only the actions that make sense for that status. */
 export function FaceRow({ row, busy, onApprove, onRevoke, onEnrol }: FaceRowProps) {
+  const styles = useStyles(createStyles);
   const enrolled = row.status !== 'Not enrolled';
   const note = enrolmentNote(row);
   return (
@@ -39,11 +40,11 @@ export function FaceRow({ row, busy, onApprove, onRevoke, onEnrol }: FaceRowProp
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = styleFactory((color) => ({
   row: { paddingVertical: space.md, gap: space.sm + 4 },
   top: { flexDirection: 'row', alignItems: 'center', gap: space.md },
   text: { flex: 1 },
   name: { ...type.label, fontSize: 16, color: color.ink },
   id: { ...type.caption, color: color.muted },
   actions: { flexDirection: 'row', flexWrap: 'wrap', gap: space.sm, paddingLeft: 44 + space.md },
-});
+}));

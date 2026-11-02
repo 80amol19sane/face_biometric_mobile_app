@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { color, space, tones, type, type Tone } from '../theme';
+import { space, type, useStyles, useTheme, type Palette, type Tone, styleFactory } from '../theme';
 import type { IconName } from './ui';
 
 interface RowProps {
@@ -15,6 +15,8 @@ interface RowProps {
 
 /** Fixed lanes: 24px icon, flexible text, trailing badge and chevron. They line up in every row. */
 export function Row({ icon, label, detail, badge, tone = 'neutral', onPress }: RowProps) {
+  const { color, tones } = useTheme();
+  const styles = useStyles(createStyles);
   const ink = tone === 'danger' ? color.danger : color.ink;
   return (
     <Pressable accessibilityRole="button" onPress={onPress} style={({ pressed }) => [styles.row, pressed && styles.pressed]}>
@@ -31,7 +33,7 @@ export function Row({ icon, label, detail, badge, tone = 'neutral', onPress }: R
         </View>
       )}
       <View style={styles.chevronLane}>
-        <Ionicons name="chevron-forward" size={18} color="#98A2B3" />
+        <Ionicons name="chevron-forward" size={18} color={color.faint} />
       </View>
     </Pressable>
   );
@@ -39,10 +41,11 @@ export function Row({ icon, label, detail, badge, tone = 'neutral', onPress }: R
 
 /** Rows sit flush on one surface, separated by hairlines instead of boxes. */
 export function RowGroup({ children }: { children: React.ReactNode }) {
+  const styles = useStyles(createStyles);
   return <View style={styles.group}>{children}</View>;
 }
 
-const styles = StyleSheet.create({
+const createStyles = styleFactory((color) => ({
   group: { backgroundColor: color.surface, borderRadius: 16, overflow: 'hidden' },
   row: {
     minHeight: 64,
@@ -61,4 +64,4 @@ const styles = StyleSheet.create({
   badge: { borderRadius: 999, paddingHorizontal: space.sm + 2, paddingVertical: 3 },
   badgeLabel: { ...type.caption, fontWeight: '700' },
   chevronLane: { width: 18, alignItems: 'center', flexShrink: 0 },
-});
+}));
