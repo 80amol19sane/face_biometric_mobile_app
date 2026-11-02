@@ -14,7 +14,7 @@ const FILTERS: Filter[] = ['All', 'Pending', 'Not enrolled', 'Active', 'Revoked'
 
 export default function Review() {
   const [rows, setRows] = useState<ReviewRow[] | null>(null);
-  const [filter, setFilter] = useState<Filter>('Pending');
+  const [filter, setFilter] = useState<Filter>('Not enrolled');
   const [query, setQuery] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);

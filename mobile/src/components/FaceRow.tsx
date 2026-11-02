@@ -1,5 +1,6 @@
 import { StyleSheet, Text, View } from 'react-native';
 import type { ReviewRow, ReviewStatus } from '../api/review';
+import { enrolmentNote } from '../lib/enrolment';
 import { color, space, type, type Tone } from '../theme';
 import { Avatar } from './Avatar';
 import { Button, Pill } from './ui';
@@ -17,6 +18,7 @@ interface FaceRowProps {
 /** One employee: avatar, name, status, then only the actions that make sense for that status. */
 export function FaceRow({ row, busy, onApprove, onRevoke, onEnrol }: FaceRowProps) {
   const enrolled = row.status !== 'Not enrolled';
+  const note = enrolmentNote(row);
   return (
     <View style={styles.row}>
       <View style={styles.top}>
@@ -24,6 +26,7 @@ export function FaceRow({ row, busy, onApprove, onRevoke, onEnrol }: FaceRowProp
         <View style={styles.text}>
           <Text style={styles.name} numberOfLines={1}>{row.employeeName}</Text>
           <Text style={styles.id}>{row.employee}</Text>
+          {note && <Text style={styles.id}>{note}</Text>}
         </View>
         <Pill label={row.status} tone={TONE[row.status]} />
       </View>
