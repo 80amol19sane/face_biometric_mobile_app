@@ -1,3 +1,4 @@
+import * as Haptics from 'expo-haptics';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ApiError } from '../src/api/http';
@@ -24,6 +25,16 @@ export default function Checkin() {
     if (step.name !== 'done') return;
     const timer = setTimeout(() => router.replace('/home'), 2500);
     return () => clearTimeout(timer);
+  }, [step]);
+
+  // A short buzz tells a person across a doorway the punch went through, or didn't.
+  useEffect(() => {
+    if (step.name === 'done') {
+      const late = describeStanding(step.shift)?.tone === 'warning';
+      Haptics.notificationAsync(late ? Haptics.NotificationFeedbackType.Warning : Haptics.NotificationFeedbackType.Success).catch(() => {});
+    } else if (step.name === 'failed') {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
+    }
   }, [step]);
 
   const submit = async (embedding: Float32Array) => {
