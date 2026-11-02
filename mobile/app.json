@@ -18,7 +18,7 @@
     },
     "android": {
       "package": "com.techbird.attendance",
-      "versionCode": 8,
+      "versionCode": 9,
       "allowBackup": false,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
