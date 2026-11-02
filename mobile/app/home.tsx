@@ -2,6 +2,7 @@ import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { ApiError } from '../src/api/http';
 import { myStatus, type MyStatus } from '../src/api/faceBiometric';
+import { canReviewFaces } from '../src/api/review';
 import { currentUser, logout } from '../src/api/session';
 import { Body, Button, Card, Chip, Screen, Title } from '../src/components/ui';
 import { isKeyHardwareBacked } from '../src/device/registry';
@@ -17,6 +18,8 @@ export default function Home() {
   const { user, setUser } = useSession();
   const [status, setStatus] = useState<MyStatus | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [noEmployee, setNoEmployee] = useState(false);
+  const [canReview, setCanReview] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -25,9 +28,13 @@ export default function Home() {
         setUser(null);
         return router.replace('/login');
       }
+      canReviewFaces().then(setCanReview);
       setStatus(await myStatus());
+      setNoEmployee(false);
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : 'Could not load your status.');
+      // The server refuses with 403 when the login has no active Employee (for example Administrator).
+      if (e instanceof ApiError && e.status === 403) setNoEmployee(true);
+      else setError(e instanceof ApiError ? e.message : 'Could not load your status.');
     }
   }, [setUser]);
 
@@ -51,23 +58,35 @@ export default function Home() {
       <Title>Attendance</Title>
       <Body>{user}</Body>
 
-      <Card>
-        {chip ? <Chip label={chip.label} tone={chip.tone} /> : <Chip label={status ? 'Face not enrolled' : 'Loading…'} tone="muted" />}
-        {user && isKeyHardwareBacked(user) && <Body>This phone’s security key is stored in secure hardware.</Body>}
-        {status?.template === 'Pending' && <Body>HR must approve your face before you can check in.</Body>}
-        {status?.template === 'Revoked' && <Body>Ask HR to restore your access, then enrol again.</Body>}
-      </Card>
+      {noEmployee ? (
+        <Card>
+          <Chip label="No employee linked" tone="muted" />
+          <Body>This login is not linked to an employee, so it cannot enrol or check in. Sign in with an employee login for that.</Body>
+        </Card>
+      ) : (
+        <Card>
+          {chip ? <Chip label={chip.label} tone={chip.tone} /> : <Chip label={status ? 'Face not enrolled' : 'Loading…'} tone="muted" />}
+          {user && isKeyHardwareBacked(user) && <Body>This phone’s security key is stored in secure hardware.</Body>}
+          {status?.template === 'Pending' && <Body>HR must approve your face before you can check in.</Body>}
+          {status?.template === 'Revoked' && <Body>Ask HR to restore your access, then enrol again.</Body>}
+        </Card>
+      )}
 
       {error && <Body tone="danger">{error}</Body>}
 
-      <Button label="Check in" onPress={() => router.push({ pathname: '/checkin', params: { logType: 'IN' } })} disabled={!canCheckIn} />
-      <Button label="Check out" onPress={() => router.push({ pathname: '/checkin', params: { logType: 'OUT' } })} disabled={!canCheckIn} />
-      <Button
-        label={status?.template ? 'Enrol my face again' : 'Enrol my face'}
-        variant="secondary"
-        onPress={() => router.push('/enrol')}
-        disabled={!status}
-      />
+      {!noEmployee && (
+        <>
+          <Button label="Check in" onPress={() => router.push({ pathname: '/checkin', params: { logType: 'IN' } })} disabled={!canCheckIn} />
+          <Button label="Check out" onPress={() => router.push({ pathname: '/checkin', params: { logType: 'OUT' } })} disabled={!canCheckIn} />
+          <Button
+            label={status?.template ? 'Enrol my face again' : 'Enrol my face'}
+            variant="secondary"
+            onPress={() => router.push('/enrol')}
+            disabled={!status}
+          />
+        </>
+      )}
+      {canReview && <Button label="Review employee faces" onPress={() => router.push('/review')} />}
       <Button label="Sign out" variant="secondary" onPress={signOut} />
     </Screen>
   );
