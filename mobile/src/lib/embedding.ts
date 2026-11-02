@@ -22,7 +22,7 @@ export function averageEmbeddings(embeddings: Float32Array[]): Float32Array {
 }
 
 /** Explicit little-endian, so the bytes do not depend on the phone's CPU. */
-export function embeddingBytes(embedding: Float32Array): Uint8Array {
+export function embeddingBytes(embedding: Float32Array): Uint8Array<ArrayBuffer> {
   const bytes = new Uint8Array(embedding.length * 4);
   const view = new DataView(bytes.buffer);
   embedding.forEach((v, i) => view.setFloat32(i * 4, v, true));

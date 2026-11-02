@@ -36,7 +36,7 @@ export function signingPayload(input: SigningInput): string {
   ].join('|');
 }
 
-export async function embeddingDigest(embeddingBytes: Uint8Array): Promise<string> {
+export async function embeddingDigest(embeddingBytes: Uint8Array<ArrayBuffer>): Promise<string> {
   const digest = await Crypto.digest(Crypto.CryptoDigestAlgorithm.SHA256, embeddingBytes);
   return bytesToHex(new Uint8Array(digest));
 }
