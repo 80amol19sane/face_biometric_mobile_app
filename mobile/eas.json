@@ -1,31 +1,12 @@
 {
-    "cli": {
-        "version": ">= 13.2.0"
+  "cli": { "version": ">= 13.2.0" },
+  "build": {
+    "preview": {
+      "distribution": "internal",
+      "android": { "buildType": "apk" }
     },
-    "build": {
-        "development": {
-            "developmentClient": true,
-            "distribution": "internal",
-            "node": "20.18.0"
-        },
-        "preview": {
-            "distribution": "internal",
-            "android": {
-                "buildType": "apk"
-            },
-            "node": "20.18.0"
-        },
-        "production": {
-            "android": {
-                "buildType": "apk"
-            },
-            "node": "20.18.0",
-            "env": {
-                "NODE_ENV": "production"
-            }
-        }
-    },
-    "submit": {
-        "production": {}
+    "production": {
+      "android": { "buildType": "app-bundle" }
     }
+  }
 }
