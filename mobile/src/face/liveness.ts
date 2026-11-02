@@ -7,8 +7,8 @@ import type { DetectedFace } from './quality';
  */
 export type Challenge = 'turn_head' | 'smile';
 
-const MIN_TURN_DEGREES = 18;
-const MIN_SMILE = 0.8;
+const MIN_TURN_DEGREES = 12;
+const MIN_SMILE = 0.6;
 
 export const CHALLENGE_PROMPTS: Record<Challenge, string> = {
   turn_head: 'Turn your head slowly to one side',
