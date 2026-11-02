@@ -30,13 +30,12 @@ const getList = <T>(doctype: string, fields: string[], filters: object, limit: n
     'GET',
   );
 
-/** True when this login may read Face Templates (HR Manager or System Manager). */
-export async function canReviewFaces(): Promise<boolean> {
+/** Number of faces waiting for approval, or null when this login may not review faces (HR Manager, System Manager). */
+export async function pendingFaceCount(): Promise<number | null> {
   try {
-    await getList('Face Template', ['name'], {}, 1);
-    return true;
+    return await callMethod<number>('frappe.client.get_count', { doctype: 'Face Template', filters: JSON.stringify({ status: 'Pending' }) }, 'GET');
   } catch {
-    return false;
+    return null;
   }
 }
 

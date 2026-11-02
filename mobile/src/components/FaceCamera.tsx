@@ -1,31 +1,33 @@
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { useEffect, useRef, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { CAPTURE_TIMEOUT_MS, SHOW_DIAGNOSTICS } from '../face/config';
 import { challengeMet, CHALLENGE_PROMPTS, pickChallenge } from '../face/liveness';
 import { analysePhoto, embedFace, release } from '../face/pipeline';
 import { assessFrontal, assessPlacement, pickSingleFace, REJECTION_PROMPTS } from '../face/quality';
 import { averageEmbeddings } from '../lib/embedding';
-import { color, radius, space } from '../theme';
-import { Body, Button, Screen, Title } from './ui';
+import { Body, Button, IconBadge, Screen, Title } from './ui';
+import { CaptureOverlay } from './CaptureOverlay';
 
 interface Props {
   /** Straight-on frames averaged into the result (3 to enrol, 1 to check in). */
   frames: number;
   onEmbedding: (embedding: Float32Array) => void;
   onFailure: (message: string) => void;
+  onCancel: () => void;
 }
 
 /**
  * Runs the whole capture: a random liveness challenge, then straight-on frames, then the embedding.
  * It only produces an embedding; it never talks to the server.
  */
-export function FaceCamera({ frames, onEmbedding, onFailure }: Props) {
+export function FaceCamera({ frames, onEmbedding, onFailure, onCancel }: Props) {
   const [permission, requestPermission] = useCameraPermissions();
   const camera = useRef<CameraView>(null);
   const [ready, setReady] = useState(false);
   const [prompt, setPrompt] = useState('Getting ready…');
   const [captured, setCaptured] = useState(0);
+  const [phase, setPhase] = useState<'live' | 'capture'>('live');
   const [diagnostics, setDiagnostics] = useState('waiting for camera');
 
   useEffect(() => {
@@ -79,6 +81,7 @@ export function FaceCamera({ frames, onEmbedding, onFailure }: Props) {
     };
 
     const frontalPhase = async (): Promise<Float32Array[]> => {
+      setPhase('capture');
       setPrompt('Now look straight at the camera');
       const embeddings: Float32Array[] = [];
       const deadline = Date.now() + CAPTURE_TIMEOUT_MS;
@@ -124,10 +127,19 @@ export function FaceCamera({ frames, onEmbedding, onFailure }: Props) {
   if (!permission) return null;
   if (!permission.granted) {
     return (
-      <Screen>
-        <Title>Camera access</Title>
-        <Body>The camera is used only to match your face when you enrol and check in. Photos are not stored.</Body>
-        <Button label="Allow camera" onPress={requestPermission} />
+      <Screen
+        footer={
+          <>
+            <Button label="Allow camera" icon="camera-outline" onPress={requestPermission} />
+            <Button label="Not now" variant="ghost" onPress={onCancel} />
+          </>
+        }
+      >
+        <View style={styles.permission}>
+          <IconBadge name="camera-outline" size={72} />
+          <Title>Camera access</Title>
+          <Body>The camera is used only to match your face when you enrol and check in. No photo is stored.</Body>
+        </View>
       </Screen>
     );
   }
@@ -135,41 +147,19 @@ export function FaceCamera({ frames, onEmbedding, onFailure }: Props) {
   return (
     <View style={styles.root}>
       <CameraView ref={camera} style={StyleSheet.absoluteFill} facing="front" onCameraReady={() => setReady(true)} />
-      <View style={styles.oval} pointerEvents="none" />
-      {SHOW_DIAGNOSTICS && <Text style={styles.diagnostics}>{diagnostics}</Text>}
-      <View style={styles.banner}>
-        <Text style={styles.prompt} accessibilityLiveRegion="polite">{prompt}</Text>
-        {frames > 1 && <Text style={styles.progress}>{captured} of {frames}</Text>}
-      </View>
+      <CaptureOverlay
+        phase={phase}
+        prompt={prompt}
+        captured={captured}
+        frames={frames}
+        diagnostics={SHOW_DIAGNOSTICS ? diagnostics : undefined}
+        onCancel={onCancel}
+      />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: '#000' },
-  oval: {
-    position: 'absolute',
-    top: '18%',
-    alignSelf: 'center',
-    width: '70%',
-    aspectRatio: 0.78,
-    borderRadius: 999,
-    borderWidth: 3,
-    borderColor: '#FFFFFF',
-    borderStyle: 'dashed',
-  },
-  banner: {
-    position: 'absolute',
-    left: space.md,
-    right: space.md,
-    bottom: space.xl,
-    backgroundColor: 'rgba(0,0,0,0.65)',
-    borderRadius: radius.md,
-    padding: space.md,
-    gap: space.xs,
-    alignItems: 'center',
-  },
-  diagnostics: { position: 'absolute', top: space.xl, left: space.md, right: space.md, color: '#9BE7A5', fontSize: 12, fontFamily: 'monospace', backgroundColor: 'rgba(0,0,0,0.5)', padding: space.xs },
-  prompt: { color: color.primaryText, fontSize: 20, fontWeight: '600', textAlign: 'center' },
-  progress: { color: '#D5DBE1', fontSize: 14 },
+  permission: { flex: 1, justifyContent: 'center', gap: 16 },
 });

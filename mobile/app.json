@@ -18,7 +18,7 @@
     },
     "android": {
       "package": "com.techbird.attendance",
-      "versionCode": 4,
+      "versionCode": 5,
       "allowBackup": false,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
@@ -61,7 +61,8 @@
         }
       ],
       "react-native-fast-tflite",
-      "./plugins/withReleaseSigning.js"
+      "./plugins/withReleaseSigning.js",
+      "expo-font"
     ],
     "extra": {
       "router": {}

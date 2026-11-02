@@ -1,87 +1,122 @@
-import type { ReactNode } from 'react';
+import { Ionicons } from '@expo/vector-icons';
+import type { ComponentProps, ReactNode } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { color, radius, space } from '../theme';
+import { color, radius, space, tones, type, type Tone } from '../theme';
 
-export function Screen({ children }: { children: ReactNode }) {
+export type IconName = ComponentProps<typeof Ionicons>['name'];
+
+interface ScreenProps {
+  children: ReactNode;
+  /** Pinned below the scrolling content: where the one primary action lives. */
+  footer?: ReactNode;
+}
+
+export function Screen({ children, footer }: ScreenProps) {
   return (
     <SafeAreaView style={styles.screen}>
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         {children}
       </ScrollView>
+      {footer && <View style={styles.footer}>{footer}</View>}
     </SafeAreaView>
   );
 }
 
-export function Title({ children }: { children: ReactNode }) {
-  return <Text style={styles.title}>{children}</Text>;
-}
+export const Title = ({ children }: { children: ReactNode }) => <Text style={styles.title}>{children}</Text>;
+export const Heading = ({ children }: { children: ReactNode }) => <Text style={styles.heading}>{children}</Text>;
+export const Caption = ({ children }: { children: ReactNode }) => <Text style={styles.caption}>{children}</Text>;
 
-export function Body({ children, tone = 'muted' }: { children: ReactNode; tone?: 'muted' | 'danger' | 'success' }) {
-  return <Text style={[styles.body, tone === 'danger' && styles.danger, tone === 'success' && styles.success]}>{children}</Text>;
-}
-
-export function Card({ children }: { children: ReactNode }) {
-  return <View style={styles.card}>{children}</View>;
+export function Body({ children, tone = 'neutral' }: { children: ReactNode; tone?: 'neutral' | 'danger' | 'success' }) {
+  const ink = tone === 'danger' ? color.danger : tone === 'success' ? color.success : color.muted;
+  return <Text style={[styles.body, { color: ink }]}>{children}</Text>;
 }
 
 interface ButtonProps {
   label: string;
   onPress: () => void;
-  variant?: 'primary' | 'secondary';
+  variant?: 'primary' | 'tonal' | 'ghost' | 'danger';
+  size?: 'md' | 'sm';
+  icon?: IconName;
   disabled?: boolean;
   busy?: boolean;
 }
 
-export function Button({ label, onPress, variant = 'primary', disabled, busy }: ButtonProps) {
+export function Button({ label, onPress, variant = 'primary', size = 'md', icon, disabled, busy }: ButtonProps) {
   const inactive = disabled || busy;
+  const look = BUTTONS[variant];
   return (
     <Pressable
       accessibilityRole="button"
       accessibilityState={{ disabled: !!inactive, busy: !!busy }}
       onPress={onPress}
       disabled={inactive}
-      style={({ pressed }) => [styles.button, styles[variant], inactive && styles.inactive, pressed && styles.pressed]}
+      style={({ pressed }) => [
+        styles.button,
+        size === 'sm' && styles.buttonSmall,
+        { backgroundColor: look.bg },
+        inactive && styles.inactive,
+        pressed && styles.pressed,
+      ]}
     >
       {busy ? (
-        <ActivityIndicator color={variant === 'primary' ? color.primaryText : color.primary} />
+        <ActivityIndicator color={look.fg} />
       ) : (
-        <Text style={[styles.buttonLabel, variant !== 'primary' && styles.buttonLabelAlt]}>{label}</Text>
+        <>
+          {icon && <Ionicons name={icon} size={size === 'sm' ? 18 : 20} color={look.fg} />}
+          <Text style={[size === 'sm' ? styles.buttonLabelSmall : styles.buttonLabel, { color: look.fg }]}>{label}</Text>
+        </>
       )}
     </Pressable>
   );
 }
 
-export function Chip({ label, tone }: { label: string; tone: 'success' | 'warning' | 'danger' | 'muted' }) {
+export function Pill({ label, tone = 'neutral' }: { label: string; tone?: Tone }) {
   return (
-    <View style={[styles.chip, { borderColor: color[tone] }]}>
-      <Text style={[styles.chipLabel, { color: color[tone] }]}>{label}</Text>
+    <View style={[styles.pill, { backgroundColor: tones[tone].bg }]}>
+      <Text style={[styles.pillLabel, { color: tones[tone].fg }]}>{label}</Text>
     </View>
   );
 }
 
+export function IconBadge({ name, tone = 'accent', size = 44 }: { name: IconName; tone?: Tone; size?: number }) {
+  return (
+    <View style={[styles.badge, { width: size, height: size, borderRadius: size / 2, backgroundColor: tones[tone].bg }]}>
+      <Ionicons name={name} size={size * 0.5} color={tones[tone].fg} />
+    </View>
+  );
+}
+
+const BUTTONS = {
+  primary: { bg: color.accent, fg: color.accentInk },
+  tonal: { bg: color.accentTint, fg: color.accent },
+  ghost: { bg: 'transparent', fg: color.accent },
+  danger: { bg: 'transparent', fg: color.danger },
+} as const;
+
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: color.bg },
   content: { padding: space.lg, gap: space.md, flexGrow: 1 },
-  title: { fontSize: 26, fontWeight: '700', color: color.text },
-  body: { fontSize: 16, lineHeight: 22, color: color.muted },
-  danger: { color: color.danger },
-  success: { color: color.success },
-  card: {
-    backgroundColor: color.surface,
+  footer: { padding: space.lg, paddingTop: space.sm, gap: space.sm, backgroundColor: color.bg },
+  title: { ...type.display, color: color.ink },
+  heading: { ...type.title, color: color.ink },
+  caption: { ...type.caption, color: color.muted },
+  body: { ...type.body },
+  button: {
+    minHeight: 54,
     borderRadius: radius.md,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: color.border,
-    padding: space.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
     gap: space.sm,
+    paddingHorizontal: space.lg,
   },
-  button: { minHeight: 52, borderRadius: radius.md, alignItems: 'center', justifyContent: 'center', paddingHorizontal: space.md },
-  primary: { backgroundColor: color.primary },
-  secondary: { backgroundColor: color.surface, borderWidth: 1, borderColor: color.primary },
-  inactive: { opacity: 0.5 },
-  pressed: { opacity: 0.85 },
-  buttonLabel: { color: color.primaryText, fontSize: 17, fontWeight: '600' },
-  buttonLabelAlt: { color: color.primary },
-  chip: { alignSelf: 'flex-start', borderWidth: 1, borderRadius: radius.pill, paddingHorizontal: space.sm + 4, paddingVertical: space.xs },
-  chipLabel: { fontSize: 13, fontWeight: '600' },
+  buttonSmall: { minHeight: 44, borderRadius: radius.sm, paddingHorizontal: space.md },
+  buttonLabel: { ...type.label, fontSize: 17 },
+  buttonLabelSmall: { ...type.label },
+  inactive: { opacity: 0.45 },
+  pressed: { opacity: 0.8 },
+  pill: { alignSelf: 'flex-start', borderRadius: radius.pill, paddingHorizontal: space.sm + 4, paddingVertical: space.xs + 1 },
+  pillLabel: { ...type.caption, fontWeight: '600' },
+  badge: { alignItems: 'center', justifyContent: 'center' },
 });
