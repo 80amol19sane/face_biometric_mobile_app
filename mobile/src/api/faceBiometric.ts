@@ -1,3 +1,4 @@
+import type { ShiftStanding } from '../lib/shift';
 import type { LogType } from '../lib/signing';
 import { callMethod } from './http';
 
@@ -29,7 +30,7 @@ export interface CheckinRequest {
 }
 
 export const submitCheckin = (request: CheckinRequest) =>
-  callMethod<{ name: string; time: string; log_type: LogType }>(`${API}.checkin.check_in`, {
+  callMethod<{ name: string; time: string; log_type: LogType; shift?: ShiftStanding | null }>(`${API}.checkin.check_in`, {
     device: request.device,
     nonce: request.nonce,
     log_type: request.logType,
