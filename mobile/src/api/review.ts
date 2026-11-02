@@ -69,3 +69,12 @@ const runTemplateMethod = (employee: string, method: 'approve' | 'revoke') =>
 
 export const approveFace = (employee: string) => runTemplateMethod(employee, 'approve');
 export const revokeFace = (employee: string) => runTemplateMethod(employee, 'revoke');
+
+/** HR enrols an employee's face in person; the template is Active at once with HR as approver. */
+export const enrolEmployeeFace = (employee: string, embedding: string, modelVersion: string) =>
+  callMethod<{ employee: string; status: Exclude<TemplateStatus, null> }>('face_biometric.api.enrolment.enrol_employee_face', {
+    employee,
+    embedding,
+    model_version: modelVersion,
+    consent: true,
+  });
