@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { color, radius, space, type } from '../theme';
+import { radius, space, styleFactory, type, useStyles } from '../theme';
 
 interface CaptureOverlayProps {
   /** 'live' while proving a real person is there, 'capture' while taking the straight-on frames. */
@@ -15,6 +15,7 @@ interface CaptureOverlayProps {
 
 /** Everything drawn over the camera: close button, step, face guide, instruction. */
 export function CaptureOverlay({ phase, prompt, captured, frames, diagnostics, onCancel }: CaptureOverlayProps) {
+  const styles = useStyles(createStyles);
   const ready = phase === 'capture';
   return (
     <SafeAreaView style={StyleSheet.absoluteFill} pointerEvents="box-none">
@@ -44,7 +45,7 @@ export function CaptureOverlay({ phase, prompt, captured, frames, diagnostics, o
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = styleFactory((color) => ({
   top: { flexDirection: 'row', alignItems: 'center', gap: space.md, padding: space.md },
   close: { width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(0,0,0,0.45)', alignItems: 'center', justifyContent: 'center' },
   step: { ...type.label, color: '#FFFFFF', backgroundColor: 'rgba(0,0,0,0.45)', paddingHorizontal: space.md, paddingVertical: space.sm, borderRadius: radius.pill, overflow: 'hidden' },
@@ -56,4 +57,4 @@ const styles = StyleSheet.create({
   dots: { flexDirection: 'row', gap: space.sm },
   dot: { width: 10, height: 10, borderRadius: 5, backgroundColor: color.line },
   dotOn: { backgroundColor: color.accent },
-});
+}));

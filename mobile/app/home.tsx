@@ -1,6 +1,6 @@
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { View } from 'react-native';
 import { ApiError } from '../src/api/http';
 import { myStatus, type MyStatus, type TemplateStatus } from '../src/api/faceBiometric';
 import { pendingFaceCount } from '../src/api/review';
@@ -11,7 +11,7 @@ import { Tile } from '../src/components/Tile';
 import { Body, Button, Caption, Heading, IconBadge, Screen, type IconName } from '../src/components/ui';
 import { displayName, greeting } from '../src/lib/names';
 import { useSession } from '../src/state/session';
-import { color, radius, space, type Tone } from '../src/theme';
+import { radius, space, styleFactory, useStyles, type Tone } from '../src/theme';
 
 interface StatusCopy {
   icon: IconName;
@@ -30,6 +30,7 @@ const STATUS: Record<'Active' | 'Pending' | 'Revoked' | 'None' | 'Loading' | 'No
 };
 
 export default function Home() {
+  const styles = useStyles(createStyles);
   const { user, setUser } = useSession();
   const [status, setStatus] = useState<MyStatus | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -113,9 +114,9 @@ function statusKey(status: MyStatus | null, noEmployee: boolean): keyof typeof S
   return template ?? 'None';
 }
 
-const styles = StyleSheet.create({
+const createStyles = styleFactory((color) => ({
   header: { flexDirection: 'row', alignItems: 'center', gap: space.md, paddingVertical: space.sm },
   status: { flexDirection: 'row', gap: space.md, alignItems: 'center', backgroundColor: color.surface, borderRadius: radius.lg, padding: space.md },
   statusText: { flex: 1, gap: 2 },
   tiles: { flexDirection: 'row', gap: space.md },
-});
+}));

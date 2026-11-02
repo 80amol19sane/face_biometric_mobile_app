@@ -5,7 +5,7 @@ import { SessionProvider } from '../src/state/session';
 export default function RootLayout() {
   return (
     <SessionProvider>
-      <StatusBar style="dark" />
+      <StatusBar style="auto" />
       <Stack screenOptions={{ headerShown: false }} />
     </SessionProvider>
   );
