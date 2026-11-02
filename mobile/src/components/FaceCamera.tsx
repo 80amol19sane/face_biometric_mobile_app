@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { CAPTURE_TIMEOUT_MS, SHOW_DIAGNOSTICS } from '../face/config';
 import { challengeMet, CHALLENGE_PROMPTS, pickChallenge } from '../face/liveness';
+import { loadEmbedder } from '../face/embedder';
 import { analysePhoto, embedFace, release } from '../face/pipeline';
 import { assessFrontal, assessPlacement, pickSingleFace, REJECTION_PROMPTS } from '../face/quality';
 import { averageEmbeddings } from '../lib/embedding';
@@ -29,6 +30,12 @@ export function FaceCamera({ frames, onEmbedding, onFailure, onCancel }: Props) 
   const [captured, setCaptured] = useState(0);
   const [phase, setPhase] = useState<'live' | 'capture'>('live');
   const [diagnostics, setDiagnostics] = useState('waiting for camera');
+
+  // Load the face model now: a broken model should fail at once, and the load hides behind the challenge.
+  useEffect(() => {
+    loadEmbedder().catch((error) => onFailure(readableError(error)));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     if (!permission?.granted) return;
@@ -113,7 +120,7 @@ export function FaceCamera({ frames, onEmbedding, onFailure, onCancel }: Props) 
         if (embeddings.length < frames) return onFailure('We could not get a clear view of your face. Please try again.');
         onEmbedding(averageEmbeddings(embeddings));
       } catch (error) {
-        if (!cancelled) onFailure(error instanceof Error ? error.message : 'Face capture failed.');
+        if (!cancelled) onFailure(readableError(error));
       }
     })();
 
@@ -163,3 +170,9 @@ const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: '#000' },
   permission: { flex: 1, justifyContent: 'center', gap: 16 },
 });
+
+/** The first line of an error, so a native stack trace never reaches the screen. */
+function readableError(error: unknown): string {
+  const first = (error instanceof Error ? error.message : '').split('\n')[0].trim();
+  return first ? first.slice(0, 160) : 'Face capture failed. Please try again.';
+}
