@@ -2,8 +2,10 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { ApiError } from '../src/api/http';
 import { enrolEmployeeFace } from '../src/api/review';
+import { Consent } from '../src/components/Consent';
 import { FaceCamera } from '../src/components/FaceCamera';
-import { Body, Button, Screen, Title } from '../src/components/ui';
+import { Result } from '../src/components/Result';
+import { Button, Screen } from '../src/components/ui';
 import { ENROL_FRAMES, MODEL_VERSION } from '../src/face/config';
 import { bytesToBase64, embeddingBytes } from '../src/lib/embedding';
 
@@ -13,6 +15,7 @@ type Step = { name: 'consent' } | { name: 'capture'; attempt: number } | { name:
 export default function EnrolEmployee() {
   const { employee, name } = useLocalSearchParams<{ employee: string; name: string }>();
   const [step, setStep] = useState<Step>({ name: 'consent' });
+  const capture = () => setStep({ name: 'capture', attempt: Date.now() });
 
   const save = async (embedding: Float32Array) => {
     setStep({ name: 'saving' });
@@ -26,47 +29,54 @@ export default function EnrolEmployee() {
 
   switch (step.name) {
     case 'capture':
-      return <FaceCamera key={step.attempt} frames={ENROL_FRAMES} onEmbedding={save} onFailure={(message) => setStep({ name: 'failed', message })} />;
+      return <FaceCamera key={step.attempt} frames={ENROL_FRAMES} onEmbedding={save} onFailure={(message) => setStep({ name: 'failed', message })} onCancel={() => router.back()} />;
     case 'saving':
-      return (
-        <Screen>
-          <Title>Saving…</Title>
-        </Screen>
-      );
+      return <Result icon="time-outline" tone="accent" title="Saving…" />;
     case 'done':
       return (
-        <Screen>
-          <Title>{name} is enrolled</Title>
-          <Body>
-            Their face is active now. On their own phone they sign in once and tap Check in; that registers the phone.
-          </Body>
-          <Button label="Done" onPress={() => router.back()} />
-        </Screen>
+        <Result
+          icon="checkmark-circle"
+          tone="success"
+          title={`${name} is enrolled`}
+          body="Their face is active. On their own phone they sign in once and tap Check in, which registers that phone."
+          actions={<Button label="Done" onPress={() => router.back()} />}
+        />
       );
     case 'failed':
       return (
-        <Screen>
-          <Title>Enrolment didn’t finish</Title>
-          <Body tone="danger">{step.message}</Body>
-          <Button label="Try again" onPress={() => setStep({ name: 'capture', attempt: Date.now() })} />
-          <Button label="Back" variant="secondary" onPress={() => router.back()} />
-        </Screen>
+        <Result
+          icon="alert-circle"
+          tone="danger"
+          title="Enrolment didn’t finish"
+          body={step.message}
+          bodyTone="danger"
+          actions={
+            <>
+              <Button label="Try again" icon="refresh" onPress={capture} />
+              <Button label="Back" variant="ghost" onPress={() => router.back()} />
+            </>
+          }
+        />
       );
     default:
       return (
-        <Screen>
-          <Title>Enrol {name}</Title>
-          <Body>{employee}</Body>
-          <Body>
-            {name} must be in front of the camera. They will be asked to turn their head or smile, then look straight ahead for a few photos.
-          </Body>
-          <Body>
-            Only a numeric face template is stored, encrypted, on your company’s HRMS server. No photo is kept. Your approval is recorded
-            against it.
-          </Body>
-          <Body>Continue only if {name} has agreed to this.</Body>
-          <Button label={`${name} agrees, continue`} onPress={() => setStep({ name: 'capture', attempt: Date.now() })} />
-          <Button label="Cancel" variant="secondary" onPress={() => router.back()} />
+        <Screen
+          footer={
+            <>
+              <Button label={`${name} agrees, continue`} onPress={capture} />
+              <Button label="Cancel" variant="ghost" onPress={() => router.back()} />
+            </>
+          }
+        >
+          <Consent
+            title={`Enrol ${name}`}
+            lead={`${employee} must be in front of the camera. Continue only if they agree.`}
+            points={[
+              { icon: 'happy-outline', text: 'They turn their head or smile, then look straight ahead for a few photos.' },
+              { icon: 'lock-closed-outline', text: 'Only a numeric face template is stored, encrypted. No photo is kept.' },
+              { icon: 'shield-checkmark-outline', text: 'Your approval is recorded against it, and it is active at once.' },
+            ]}
+          />
         </Screen>
       );
   }

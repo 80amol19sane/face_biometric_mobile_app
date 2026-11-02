@@ -2,9 +2,10 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ApiError } from '../src/api/http';
 import { checkIn } from '../src/api/checkin';
-import { Body, Button, Screen, Title } from '../src/components/ui';
-import { FaceCamera } from '../src/components/FaceCamera';
 import { myStatus } from '../src/api/faceBiometric';
+import { FaceCamera } from '../src/components/FaceCamera';
+import { Result } from '../src/components/Result';
+import { Button } from '../src/components/ui';
 import { ensureDevice } from '../src/device/registry';
 import type { LogType } from '../src/lib/signing';
 import { useSession } from '../src/state/session';
@@ -14,6 +15,7 @@ type Step = { name: 'capture'; attempt: number } | { name: 'sending' } | { name:
 export default function Checkin() {
   const { logType: param } = useLocalSearchParams<{ logType: string }>();
   const logType: LogType = param === 'OUT' ? 'OUT' : 'IN';
+  const word = logType === 'IN' ? 'in' : 'out';
   const { user } = useSession();
   const [step, setStep] = useState<Step>({ name: 'capture', attempt: 0 });
 
@@ -38,29 +40,26 @@ export default function Checkin() {
 
   switch (step.name) {
     case 'capture':
-      return <FaceCamera key={step.attempt} frames={1} onEmbedding={submit} onFailure={(message) => setStep({ name: 'failed', message })} />;
+      return <FaceCamera key={step.attempt} frames={1} onEmbedding={submit} onFailure={(message) => setStep({ name: 'failed', message })} onCancel={() => router.back()} />;
     case 'sending':
-      return (
-        <Screen>
-          <Title>Verifying…</Title>
-          <Body>Checking your face and this phone with the server.</Body>
-        </Screen>
-      );
+      return <Result icon="time-outline" tone="accent" title="Verifying…" body="Checking your face and this phone with the server." />;
     case 'done':
-      return (
-        <Screen>
-          <Title>{logType === 'IN' ? 'Checked in' : 'Checked out'}</Title>
-          <Body tone="success">{step.time}</Body>
-        </Screen>
-      );
+      return <Result icon="checkmark-circle" tone="success" title={`Checked ${word}`} body={step.time} bodyTone="success" />;
     case 'failed':
       return (
-        <Screen>
-          <Title>Not checked {logType === 'IN' ? 'in' : 'out'}</Title>
-          <Body tone="danger">{step.message}</Body>
-          <Button label="Try again" onPress={() => setStep({ name: 'capture', attempt: Date.now() })} />
-          <Button label="Back" variant="secondary" onPress={() => router.replace('/home')} />
-        </Screen>
+        <Result
+          icon="alert-circle"
+          tone="danger"
+          title={`Not checked ${word}`}
+          body={step.message}
+          bodyTone="danger"
+          actions={
+            <>
+              <Button label="Try again" icon="refresh" onPress={() => setStep({ name: 'capture', attempt: Date.now() })} />
+              <Button label="Back" variant="ghost" onPress={() => router.back()} />
+            </>
+          }
+        />
       );
   }
 }

@@ -1,8 +1,9 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { ApiError, callMethod, getServerUrl, normaliseServerUrl, saveServerUrl } from '../src/api/http';
+import { Brand } from '../src/components/Brand';
 import { Field } from '../src/components/Field';
-import { Body, Button, Screen, Title } from '../src/components/ui';
+import { Body, Button, Screen } from '../src/components/ui';
 
 export default function ServerScreen() {
   const [address, setAddress] = useState('');
@@ -26,20 +27,10 @@ export default function ServerScreen() {
   };
 
   return (
-    <Screen>
-      <Title>Connect to your company</Title>
-      <Body>Enter the address of your HRMS site. Your HR team can tell you what it is.</Body>
-      <Field
-        label="Server address"
-        placeholder="hrms.company.com"
-        keyboardType="url"
-        value={address}
-        onChangeText={setAddress}
-        returnKeyType="go"
-        onSubmitEditing={connect}
-      />
+    <Screen footer={<Button label="Continue" onPress={connect} busy={busy} disabled={!address.trim()} />}>
+      <Brand title="Connect to your company" subtitle="Enter the address of your HRMS site. Your HR team can tell you what it is." />
+      <Field label="Server address" placeholder="hrms.company.com" keyboardType="url" value={address} onChangeText={setAddress} returnKeyType="go" onSubmitEditing={connect} />
       {error && <Body tone="danger">{error}</Body>}
-      <Button label="Connect" onPress={connect} busy={busy} disabled={!address.trim()} />
     </Screen>
   );
 }
