@@ -10,6 +10,7 @@ import { Row, RowGroup } from '../src/components/Row';
 import { Tile } from '../src/components/Tile';
 import { Body, Button, Caption, Heading, IconBadge, Screen, type IconName } from '../src/components/ui';
 import { displayName, greeting } from '../src/lib/names';
+import { punchLines } from '../src/lib/punches';
 import { useSession } from '../src/state/session';
 import { radius, space, styleFactory, useStyles, type Tone } from '../src/theme';
 
@@ -66,6 +67,8 @@ export default function Home() {
   const canCheckIn = status?.template === 'Active';
   const canReview = pending !== null;
   const reviewBadge = pending ? `${pending} pending` : undefined;
+  const next = status?.next_log_type ?? 'IN';
+  const today = punchLines(status?.today);
   const punch = (logType: 'IN' | 'OUT') => router.push({ pathname: '/checkin', params: { logType } });
 
   return (
@@ -92,8 +95,15 @@ export default function Home() {
 
       {!noEmployee && (
         <View style={styles.tiles}>
-          <Tile icon="log-in-outline" label="Check in" primary disabled={!canCheckIn} onPress={() => punch('IN')} />
-          <Tile icon="log-out-outline" label="Check out" disabled={!canCheckIn} onPress={() => punch('OUT')} />
+          <Tile icon="log-in-outline" label="Check in" primary={next === 'IN'} disabled={!canCheckIn} onPress={() => punch('IN')} />
+          <Tile icon="log-out-outline" label="Check out" primary={next === 'OUT'} disabled={!canCheckIn} onPress={() => punch('OUT')} />
+        </View>
+      )}
+
+      {!noEmployee && today.length > 0 && (
+        <View style={styles.today}>
+          <Caption>Today</Caption>
+          <Body>{today.join('   ·   ')}</Body>
         </View>
       )}
 
@@ -119,4 +129,5 @@ const createStyles = styleFactory((color) => ({
   status: { flexDirection: 'row', gap: space.md, alignItems: 'center', backgroundColor: color.surface, borderRadius: radius.lg, padding: space.md },
   statusText: { flex: 1, gap: 2 },
   tiles: { flexDirection: 'row', gap: space.md },
+  today: { gap: 2, paddingHorizontal: space.xs },
 }));

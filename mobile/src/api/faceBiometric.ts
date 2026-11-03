@@ -1,3 +1,4 @@
+import type { Punch } from '../lib/punches';
 import type { ShiftStanding } from '../lib/shift';
 import type { LogType } from '../lib/signing';
 import { callMethod } from './http';
@@ -8,6 +9,9 @@ export type TemplateStatus = 'Pending' | 'Active' | 'Revoked' | null;
 
 export interface MyStatus {
   template: TemplateStatus;
+  /** Absent on servers older than the punches update. */
+  next_log_type?: LogType;
+  today?: Punch[];
   devices: { name: string; device_label: string | null }[];
 }
 
