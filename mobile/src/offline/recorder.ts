@@ -24,9 +24,9 @@ const BLOCK_MESSAGES: Record<QueueBlock, string> = {
 /**
  * Saves a face scan for later: signs it with the kiosk key and adds it to the encrypted queue. The
  * phone never works out who the person is; the server does that when the scan is sent.
- * Returns the time the person will see on the screen.
+ * Returns the time the person will see on the screen, and the scan's id so they can add their employee ID.
  */
-export async function recordOffline(device: string, embedding: Float32Array, config: KioskConfig): Promise<Date> {
+export async function recordOffline(device: string, embedding: Float32Array, config: KioskConfig): Promise<{ at: Date; localId: string }> {
   const contact = await lastContact();
   const wallMs = Date.now();
   const elapsedMs = DeviceKey.elapsedRealtimeMs();
@@ -49,5 +49,8 @@ export async function recordOffline(device: string, embedding: Float32Array, con
     hash: await sha256Text(payload),
   };
   await scanQueue.add(scan);
-  return new Date(stamp.anchoredMs);
+  return { at: new Date(stamp.anchoredMs), localId: scan.localId };
 }
+
+/** The person typed who they are. It only helps HR if the server is unsure; the server never trusts it. */
+export const claimEmployee = (localId: string, employee: string) => scanQueue.claim(localId, employee.trim());

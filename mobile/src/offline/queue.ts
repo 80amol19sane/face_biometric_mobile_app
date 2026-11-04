@@ -12,6 +12,8 @@ export interface QueuedScan extends OfflineScanFields {
   embedding: string;
   signature: string;
   hash: string;
+  /** An employee ID the person typed after the scan. A hint for HR only; it is not signed. */
+  claimedEmployee?: string;
 }
 
 export interface LastRun {
@@ -66,6 +68,11 @@ export class ScanQueue {
 
   add(scan: QueuedScan): Promise<void> {
     return this.change((state) => ({ ...state, head: scan.hash, scans: [...state.scans, scan] }));
+  }
+
+  /** Attach the ID the person typed to a scan still waiting. It is not part of the signed record. */
+  claim(localId: string, employee: string): Promise<void> {
+    return this.change((state) => ({ ...state, scans: state.scans.map((scan) => (scan.localId === localId ? { ...scan, claimedEmployee: employee } : scan)) }));
   }
 
   /** Drop the scans the server has settled; keep the rest for the next try. */

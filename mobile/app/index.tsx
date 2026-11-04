@@ -84,7 +84,7 @@ function Setup() {
   );
 }
 
-type Outcome = { kind: 'punch'; punch: KioskPunch } | { kind: 'queued'; at: Date } | { kind: 'failed'; title: string; pill: string; message: string };
+type Outcome = { kind: 'punch'; punch: KioskPunch } | { kind: 'queued'; at: Date; localId: string } | { kind: 'failed'; title: string; pill: string; message: string };
 
 function Ready({ device, config, offline, retry }: { device: string; config: KioskConfig; offline: boolean; retry: () => void }) {
   useOfflineSync(device, !offline);
@@ -111,7 +111,7 @@ function Ready({ device, config, offline, retry }: { device: string; config: Kio
 
   // Covered by admin or the PIN screen: close the camera (unmount Scan) so they can open it.
   if (!focused) return <View style={styles.covered} />;
-  if (outcome?.kind === 'queued') return <QueuedResult at={outcome.at} seconds={config.return_seconds} onDone={again} />;
+  if (outcome?.kind === 'queued') return <QueuedResult at={outcome.at} localId={outcome.localId} seconds={config.return_seconds} onDone={again} />;
   if (outcome?.kind === 'punch') return <PunchResult punch={outcome.punch} seconds={config.return_seconds} onDone={again} />;
   if (outcome?.kind === 'failed') {
     return (
@@ -218,7 +218,7 @@ function describe(stage: CaptureStage, matching: boolean, offline: boolean): { t
 /** Offline: keep the scan for the server to match later. Never says who it was. */
 async function saveForLater(device: string, embedding: Float32Array, config: KioskConfig): Promise<Outcome> {
   try {
-    return { kind: 'queued', at: await recordOffline(device, embedding, config) };
+    return { kind: 'queued', ...(await recordOffline(device, embedding, config)) };
   } catch (error) {
     const message = error instanceof ScanRefused ? error.message : 'This scan could not be saved. Please try again.';
     return { kind: 'failed', title: 'Not saved', pill: 'Not saved', message };

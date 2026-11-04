@@ -57,4 +57,5 @@ const toWire = (scan: QueuedScan) => ({
   anchor_boot_count: scan.anchorBootCount,
   embedding: scan.embedding,
   signature: scan.signature,
+  claimed_employee: scan.claimedEmployee,
 });

@@ -36,6 +36,16 @@ describe('ScanQueue', () => {
     expect(await queue.head()).toBe('hash-b');
   });
 
+  it('attaches a typed ID to one waiting scan and leaves the others alone', async () => {
+    const storage = memory();
+    const queue = new ScanQueue(storage);
+    await queue.add(scan('a'));
+    await queue.add(scan('b'));
+    await queue.claim('b', 'HR-EMP-00032');
+    expect(storage.saved.scans.map((s) => s.claimedEmployee)).toEqual([undefined, 'HR-EMP-00032']);
+    expect(storage.saved.head).toBe('hash-b');
+  });
+
   it('settles only the scans the server named and keeps the head', async () => {
     const storage = memory();
     const queue = new ScanQueue(storage);
