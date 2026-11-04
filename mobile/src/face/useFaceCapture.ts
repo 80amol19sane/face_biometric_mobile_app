@@ -12,6 +12,8 @@ import { assessFrontal, assessPlacement, pickSingleFace, REJECTION_PROMPTS } fro
 export type CaptureStage = 'watching' | 'positioning' | 'liveness' | 'capturing';
 
 const WATCH_INTERVAL_MS = 600;
+const SNAP_ATTEMPTS = 5;
+const SNAP_RETRY_MS = 500;
 /** Asleep, a look once a second is enough to notice someone walking up. */
 const SLEEP_INTERVAL_MS = 1000;
 
@@ -71,7 +73,21 @@ export function useFaceCapture({ frames, enabled, watch = false, sleepAfterMs = 
     let cancelled = false;
     let frame = 0;
 
-    const snap = async () => (await camera.current?.takePictureAsync({ quality: 0.5, shutterSound: false, exif: false })) ?? null;
+    /** A still can fail for a moment (camera busy or restarting). Retry a few times before giving up the scan. */
+    const snap = async () => {
+      let last: unknown;
+      for (let attempt = 1; attempt <= SNAP_ATTEMPTS && !cancelled; attempt++) {
+        try {
+          return (await camera.current?.takePictureAsync({ quality: 0.5, shutterSound: false, exif: false })) ?? null;
+        } catch (error) {
+          last = error;
+          setDiagnostics(`capture failed (try ${attempt}/${SNAP_ATTEMPTS}): ${readableError(error)}`);
+          await sleep(SNAP_RETRY_MS);
+        }
+      }
+      if (last) throw last;
+      return null;
+    };
     const look = async (photo: { uri: string; width: number; height: number }) => {
       const analysed = await analysePhoto(photo.uri, photo.width, photo.height);
       const [face] = analysed.faces;
