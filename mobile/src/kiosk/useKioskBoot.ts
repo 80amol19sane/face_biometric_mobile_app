@@ -36,7 +36,10 @@ export function useKioskBoot() {
           const cached = error instanceof ApiError && error.kind === 'network' ? (await lastContact())?.config : undefined;
           if (cancelled) return;
           if (cached?.offline_enabled) return setBoot({ name: 'ready', device, config: cached, offline: true });
-          setBoot({ name: 'offline', message: error instanceof ApiError ? error.message : 'Could not reach the server.' });
+          const base = error instanceof ApiError ? error.message : 'Could not reach the server.';
+          // Say why it cannot carry on, so HR knows what to switch on.
+          const why = cached ? ' Offline attendance is switched off for this kiosk (Admin, More, Devices).' : '';
+          setBoot({ name: 'offline', message: base + why });
         }
       })();
       return () => {
