@@ -9,15 +9,23 @@ import { identify, type KioskConfig, type KioskPunch } from '../src/api/kiosk';
 import { CameraNotice, FailSheet, IdleSheet, ScanSheet } from '../src/components/kiosk/KioskSheets';
 import { KioskChrome, type KioskTone } from '../src/components/kiosk/KioskChrome';
 import { PunchResult } from '../src/components/kiosk/PunchResult';
+import { QueuedResult } from '../src/components/kiosk/QueuedResult';
 import { SleepCover } from '../src/components/kiosk/SleepCover';
 import { Result } from '../src/components/Result';
 import { Button } from '../src/components/ui';
 import { useFaceCapture, type CaptureStage } from '../src/face/useFaceCapture';
 import { useKioskBoot } from '../src/kiosk/useKioskBoot';
 import { sleepAfterMs } from '../src/lib/sleep';
+import { recordOffline, ScanRefused } from '../src/offline/recorder';
+import { useOfflineSync, useReconnect } from '../src/offline/useOfflineSync';
 import { usePreferences } from '../src/state/preferences';
 
 const FAIL_RETURN_MS = 20_000;
+const FEEDBACK = {
+  ok: Haptics.NotificationFeedbackType.Success,
+  notice: Haptics.NotificationFeedbackType.Warning,
+  failed: Haptics.NotificationFeedbackType.Error,
+};
 const goAdmin = () => router.push('/admin/login');
 const goPin = () => router.push('/pin');
 
@@ -57,7 +65,7 @@ export default function Kiosk() {
         />
       );
     case 'ready':
-      return <Ready device={boot.device} config={boot.config} />;
+      return <Ready device={boot.device} config={boot.config} offline={boot.offline} retry={retry} />;
   }
 }
 
@@ -75,9 +83,11 @@ function Setup() {
   );
 }
 
-type Outcome = { kind: 'punch'; punch: KioskPunch } | { kind: 'failed'; title: string; pill: string; message: string };
+type Outcome = { kind: 'punch'; punch: KioskPunch } | { kind: 'queued'; at: Date } | { kind: 'failed'; title: string; pill: string; message: string };
 
-function Ready({ device, config }: { device: string; config: KioskConfig }) {
+function Ready({ device, config, offline, retry }: { device: string; config: KioskConfig; offline: boolean; retry: () => void }) {
+  useOfflineSync(device, !offline);
+  useReconnect(offline, retry);
   const [run, setRun] = useState(0);
   const [outcome, setOutcome] = useState<Outcome | null>(null);
   const again = useCallback(() => {
@@ -92,24 +102,24 @@ function Ready({ device, config }: { device: string; config: KioskConfig }) {
   }, [outcome, again]);
 
   const finish = useCallback((result: Outcome) => {
-    const feedback =
-      result.kind === 'failed' ? Haptics.NotificationFeedbackType.Error : result.punch.shift?.status === 'Late' ? Haptics.NotificationFeedbackType.Warning : Haptics.NotificationFeedbackType.Success;
+    const feedback = FEEDBACK[result.kind === 'punch' && result.punch.shift?.status !== 'Late' ? 'ok' : result.kind === 'failed' ? 'failed' : 'notice'];
     Haptics.notificationAsync(feedback).catch(() => {});
     setOutcome(result);
   }, []);
 
+  if (outcome?.kind === 'queued') return <QueuedResult at={outcome.at} seconds={config.return_seconds} onDone={again} />;
   if (outcome?.kind === 'punch') return <PunchResult punch={outcome.punch} seconds={config.return_seconds} onDone={again} />;
   if (outcome?.kind === 'failed') {
     return (
       <KioskChrome tone="fail" pill={outcome.pill} instruction="" onAdmin={goAdmin}>
-        <FailSheet title={outcome.title} message={outcome.message} pinEnabled={config.pin_enabled} onRetry={again} onPin={goPin} />
+        <FailSheet title={outcome.title} message={outcome.message} pinEnabled={config.pin_enabled && !offline} onRetry={again} onPin={goPin} />
       </KioskChrome>
     );
   }
-  return <Scan key={run} device={device} config={config} onOutcome={finish} />;
+  return <Scan key={run} device={device} config={config} offline={offline} onOutcome={finish} />;
 }
 
-function Scan({ device, config, onOutcome }: { device: string; config: KioskConfig; onOutcome: (outcome: Outcome) => void }) {
+function Scan({ device, config, offline, onOutcome }: { device: string; config: KioskConfig; offline: boolean; onOutcome: (outcome: Outcome) => void }) {
   const { diagnostics: showDiagnostics, sleep } = usePreferences();
   const [permission, requestPermission] = useCameraPermissions();
   const [matching, setMatching] = useState(false);
@@ -120,12 +130,15 @@ function Scan({ device, config, onOutcome }: { device: string; config: KioskConf
       matchingRef.current = true;
       setMatching(true);
       try {
+        if (offline) return onOutcome(await saveForLater(device, embedding, config));
         onOutcome({ kind: 'punch', punch: await identify(device, embedding) });
       } catch (error) {
-        onOutcome(failure(error));
+        // The connection dropped mid-scan: keep the scan instead of making the person start again.
+        const lost = error instanceof ApiError && error.kind === 'network' && config.offline_enabled;
+        onOutcome(lost ? await saveForLater(device, embedding, config) : failure(error));
       }
     },
-    [device, onOutcome],
+    [device, config, offline, onOutcome],
   );
   const onFailure = useCallback(
     (message: string) =>
@@ -152,7 +165,7 @@ function Scan({ device, config, onOutcome }: { device: string; config: KioskConf
     if (permission && !permission.granted && permission.canAskAgain) requestPermission();
   }, [permission, requestPermission]);
 
-  const { tone, pill } = describe(stage, matching);
+  const { tone, pill } = describe(stage, matching, offline);
   const watching = stage === 'watching' && !matching;
   const instruction = matching ? 'Matching…' : watching && prompt === 'Getting ready…' ? 'Position your face inside the frame' : prompt;
 
@@ -179,9 +192,9 @@ function Scan({ device, config, onOutcome }: { device: string; config: KioskConf
             onAction={requestPermission}
           />
         ) : watching ? (
-          <IdleSheet location={config.label ?? config.location} pinEnabled={config.pin_enabled} onPin={goPin} />
+          <IdleSheet location={config.label ?? config.location} pinEnabled={config.pin_enabled && !offline} onPin={goPin} />
         ) : (
-          <ScanSheet stage={stage} matching={matching} requireLiveness={config.require_liveness} pinEnabled={config.pin_enabled && !matching} onPin={goPin} />
+          <ScanSheet stage={stage} matching={matching} requireLiveness={config.require_liveness} pinEnabled={config.pin_enabled && !matching && !offline} onPin={goPin} />
         )}
         {showDiagnostics && permission?.granted ? <DiagnosticsLine text={diagnostics} /> : null}
       </KioskChrome>
@@ -190,11 +203,22 @@ function Scan({ device, config, onOutcome }: { device: string; config: KioskConf
   );
 }
 
-function describe(stage: CaptureStage, matching: boolean): { tone: KioskTone; pill: string } {
+function describe(stage: CaptureStage, matching: boolean, offline: boolean): { tone: KioskTone; pill: string } {
+  if (offline && stage === 'watching' && !matching) return { tone: 'liveness', pill: 'Offline · scans are saved' };
   if (matching) return { tone: 'found', pill: 'Matching' };
   if (stage === 'watching') return { tone: 'idle', pill: 'Ready for attendance' };
   if (stage === 'liveness') return { tone: 'liveness', pill: 'Liveness check' };
   return { tone: 'found', pill: 'Face found' };
+}
+
+/** Offline: keep the scan for the server to match later. Never says who it was. */
+async function saveForLater(device: string, embedding: Float32Array, config: KioskConfig): Promise<Outcome> {
+  try {
+    return { kind: 'queued', at: await recordOffline(device, embedding, config) };
+  } catch (error) {
+    const message = error instanceof ScanRefused ? error.message : 'This scan could not be saved. Please try again.';
+    return { kind: 'failed', title: 'Not saved', pill: 'Not saved', message };
+  }
 }
 
 /** Turns a server or network error into what the person at the kiosk should read. */

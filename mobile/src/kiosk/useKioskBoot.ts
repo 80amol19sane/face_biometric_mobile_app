@@ -2,6 +2,7 @@ import { useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { ApiError, getServerUrl } from '../api/http';
 import { fetchConfig, type KioskConfig } from '../api/kiosk';
+import { lastContact } from '../offline/contact';
 import { getKioskDevice } from './registry';
 
 export type KioskBoot =
@@ -9,11 +10,12 @@ export type KioskBoot =
   | { name: 'no_server' }
   | { name: 'not_registered' }
   | { name: 'offline'; message: string }
-  | { name: 'ready'; device: string; config: KioskConfig };
+  /** `offline` means the server could not be reached and the kiosk is running on its last settings. */
+  | { name: 'ready'; device: string; config: KioskConfig; offline: boolean };
 
 /**
  * Works out whether this phone can run as a kiosk: a server address, a registered kiosk key, and a
- * live answer from the server. Re-runs whenever the screen regains focus, so coming back from the
+ * live answer from the server, or, when HR allowed offline attendance, the settings it last had. Re-runs whenever the screen regains focus, so coming back from the
  * admin area picks up a new registration or changed settings.
  */
 export function useKioskBoot() {
@@ -29,9 +31,12 @@ export function useKioskBoot() {
         if (!device) return setBoot({ name: 'not_registered' });
         try {
           const config = await fetchConfig(device);
-          if (!cancelled) setBoot({ name: 'ready', device, config });
+          if (!cancelled) setBoot({ name: 'ready', device, config, offline: false });
         } catch (error) {
-          if (!cancelled) setBoot({ name: 'offline', message: error instanceof ApiError ? error.message : 'Could not reach the server.' });
+          const cached = error instanceof ApiError && error.kind === 'network' ? (await lastContact())?.config : undefined;
+          if (cancelled) return;
+          if (cached?.offline_enabled) return setBoot({ name: 'ready', device, config: cached, offline: true });
+          setBoot({ name: 'offline', message: error instanceof ApiError ? error.message : 'Could not reach the server.' });
         }
       })();
       return () => {
