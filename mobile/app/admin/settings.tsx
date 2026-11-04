@@ -73,6 +73,15 @@ export default function Settings() {
               <Stepper value={data.kiosk_return_seconds} step={1} min={2} max={20} format={(v) => `${v} s`} onChange={(v) => save({ kiosk_return_seconds: v })} />
             </SettingRow>
           </Group>
+          <Group title="OFFLINE ATTENDANCE">
+            <SettingRow label="Allow offline attendance" hint="Kiosks save face scans without internet; the server checks them later">{toggle('offline_enabled', 'Allow offline attendance')}</SettingRow>
+            <SettingRow label="Offline window" hint="Older scans are held for HR">
+              <Stepper value={data.offline_max_hours} step={12} min={12} max={168} format={(v) => `${v} h`} onChange={(v) => save({ offline_max_hours: v })} />
+            </SettingRow>
+            <SettingRow label="Review window" hint="Unreviewed scans are then closed as rejected">
+              <Stepper value={data.held_retention_days} step={15} min={15} max={365} format={(v) => `${v} days`} onChange={(v) => save({ held_retention_days: v })} />
+            </SettingRow>
+          </Group>
           <Caption>Recognition and rule changes apply to every kiosk within a minute.</Caption>
         </>
       )}

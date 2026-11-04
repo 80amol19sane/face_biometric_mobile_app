@@ -1,6 +1,8 @@
 import * as SecureStore from 'expo-secure-store';
 import { DeviceKey } from '../../modules/device-key';
 import { callMethod } from '../api/http';
+import { forgetContact } from '../offline/contact';
+import { wipeQueue } from '../offline/storage';
 
 /** One kiosk key per phone. Employees never have one: they do not sign in here. */
 export const KIOSK_ALIAS = 'fb_kiosk';
@@ -38,4 +40,6 @@ export async function registerThisPhone(label: string, location: string | null):
 export async function forgetKiosk(): Promise<void> {
   if (DeviceKey.hasKey(KIOSK_ALIAS)) DeviceKey.deleteKey(KIOSK_ALIAS);
   await SecureStore.deleteItemAsync(DEVICE_KEY);
+  await forgetContact();
+  wipeQueue();
 }

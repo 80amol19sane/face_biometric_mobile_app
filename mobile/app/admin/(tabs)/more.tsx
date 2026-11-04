@@ -27,8 +27,9 @@ export default function More() {
       </View>
       <RowGroup>
         <Row icon="warning-outline" tone="danger" label="Failed attempts" detail="Unrecognised faces and wrong PINs" badge={data?.failed_today ? String(data.failed_today) : undefined} onPress={() => router.push('/admin/failed')} />
+        <Row icon="cloud-offline-outline" tone={data?.awaiting_review ? 'warning' : 'neutral'} label="Offline review" detail="Scans saved offline that need a decision" badge={data?.awaiting_review ? String(data.awaiting_review) : undefined} onPress={() => router.push('/admin/offline-review')} />
         <Row icon="phone-portrait-outline" label="Devices" detail="Kiosks and their locations" onPress={() => router.push('/admin/devices')} />
-        <Row icon="sync-outline" label="Sync status" detail="Connection to Frappe" onPress={() => router.push('/admin/sync')} />
+        <Row icon="sync-outline" label="Sync status" detail="Connection and scans waiting to send" onPress={() => router.push('/admin/sync')} />
         <Row icon="settings-outline" label="Settings" detail="Recognition, PIN rules, camera, theme" onPress={() => router.push('/admin/settings')} />
       </RowGroup>
     </AdminPage>

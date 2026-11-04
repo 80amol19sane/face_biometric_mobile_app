@@ -14,6 +14,8 @@ export interface Dashboard {
   present_today: number;
   failed_today: number;
   pending: number;
+  offline_today: number;
+  awaiting_review: number;
 }
 
 export type ShowFilter = 'all' | 'no_face' | 'no_pin' | 'inactive';
@@ -89,6 +91,7 @@ export interface DeviceRow {
   device_kind: 'Personal' | 'Kiosk' | null;
   device_label: string | null;
   location: string | null;
+  allow_offline: 0 | 1;
   status: 'Active' | 'Revoked';
   employee_name: string | null;
   last_seen: string | null;
@@ -102,6 +105,18 @@ export interface SyncStatus {
   settings_updated: string;
 }
 
+/** An offline scan the server could not settle by itself, waiting for HR. */
+export interface HeldScan {
+  name: string;
+  creation: string;
+  employee: string;
+  employee_name: string | null;
+  device: string | null;
+  recorded_at: string;
+  similarity: number | null;
+  detail: string | null;
+}
+
 export interface AdminSettings {
   require_liveness: number;
   pin_enabled: number;
@@ -109,6 +124,10 @@ export interface AdminSettings {
   pin_max_length: number;
   kiosk_return_seconds: number;
   photo_retention_days: number;
+  offline_enabled: number;
+  offline_max_hours: number;
+  held_retention_days: number;
+  offline_clock_tolerance_minutes: number;
   match_threshold: number;
   identify_margin: number;
   max_failed_attempts: number;
@@ -123,6 +142,10 @@ export const biometricHistory = (employee: string) => get<HistoryEvent[]>('biome
 export const attendanceLogs = (date?: string) => get<AttendanceDay>('attendance_logs', { date });
 export const failedAttempts = (date?: string, method?: 'Face' | 'PIN') => get<FailedAttempt[]>('failed_attempts', { date, method });
 export const devices = () => get<DeviceRow[]>('devices');
+export const offlineReview = () => get<HeldScan[]>('offline_review');
+export const approveOffline = (log: string, note: string) => post('approve_offline', { log, note });
+export const rejectOffline = (log: string, note: string) => post('reject_offline', { log, note });
+export const setDeviceOffline = (device: string, allow: boolean) => post('set_device_offline', { device, allow: allow ? 1 : 0 });
 export const syncStatus = () => get<SyncStatus>('sync_status');
 export const adminSettings = () => get<AdminSettings>('get_settings');
 

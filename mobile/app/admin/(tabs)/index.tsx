@@ -48,6 +48,8 @@ export default function Overview() {
             <StatTile value={data.not_enrolled} label="Not enrolled" tone={data.not_enrolled ? 'warning' : undefined} />
             <StatTile value={data.failed_today} label="Failed attempts today" tone={data.failed_today ? 'danger' : undefined} />
             <StatTile value={data.pending} label="Pending registrations" />
+            <StatTile value={data.offline_today} label="Offline scans today" />
+            <StatTile value={data.awaiting_review} label="Offline awaiting review" tone={data.awaiting_review ? 'warning' : undefined} />
           </View>
 
           {data.not_enrolled > 0 && (
