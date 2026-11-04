@@ -1,10 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
-import { useState } from 'react';
+import { router, useFocusEffect } from 'expo-router';
+import { useCallback, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { dashboard } from '../../src/api/admin';
-import { ApiError } from '../../src/api/http';
+import { ApiError, getServerUrl } from '../../src/api/http';
 import { login, logout } from '../../src/api/session';
 import { Field } from '../../src/components/Field';
 import { Body, Button, Pill } from '../../src/components/ui';
@@ -20,6 +20,15 @@ export default function AdminLogin() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [server, setServer] = useState<string | null | undefined>(undefined);
+
+  // Reload when coming back from the server screen.
+  useFocusEffect(
+    useCallback(() => {
+      getServerUrl().then(setServer);
+    }, []),
+  );
+  const editServer = () => router.push({ pathname: '/server', params: { next: '/admin/login' } });
 
   const submit = async () => {
     setBusy(true);
@@ -59,11 +68,21 @@ export default function AdminLogin() {
           <Pill label="Restricted" tone="warning" />
         </View>
         <Body>Register employees · Update face · Reset PIN · Attendance reports</Body>
+        <View style={styles.server}>
+          <Ionicons name="globe-outline" size={22} color={color.accent} />
+          <View style={styles.serverText}>
+            <Text style={styles.serverLabel}>Connecting to</Text>
+            <Text style={styles.serverUrl} numberOfLines={1}>{server === undefined ? '…' : server ? server.replace('https://', '') : 'No server set yet'}</Text>
+          </View>
+          <Pressable accessibilityRole="button" accessibilityLabel={server ? 'Change server' : 'Add server'} onPress={editServer} style={styles.serverEdit}>
+            <Text style={styles.serverEditText}>{server ? 'Change' : 'Add'}</Text>
+          </Pressable>
+        </View>
         <View style={styles.form}>
           <Field label="Username or email" value={username} onChangeText={setUsername} keyboardType="email-address" textContentType="username" autoComplete="username" returnKeyType="next" />
           <Field label="Password" value={password} onChangeText={setPassword} secureTextEntry textContentType="password" autoComplete="password" returnKeyType="go" onSubmitEditing={submit} />
           {error ? <Body tone="danger">{error}</Body> : null}
-          <Button label="Log in" busy={busy} disabled={!username.trim() || !password} onPress={submit} />
+          <Button label="Log in" busy={busy} disabled={!server || !username.trim() || !password} onPress={submit} />
         </View>
       </View>
       <View style={styles.note}>
@@ -83,6 +102,12 @@ const createStyles = styleFactory((color) => ({
   mark: { width: 60, height: 60, borderRadius: 16, backgroundColor: color.accent, alignItems: 'center', justifyContent: 'center' },
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: space.sm + 2, flexWrap: 'wrap' },
   title: { fontSize: 28, lineHeight: 34, fontWeight: '700', letterSpacing: -0.3, color: color.ink },
+  server: { flexDirection: 'row', alignItems: 'center', gap: space.sm + 2, padding: space.md - 2, borderRadius: 16, backgroundColor: color.surface },
+  serverText: { flex: 1 },
+  serverLabel: { ...type.caption, color: color.muted },
+  serverUrl: { ...type.label, fontSize: 16, color: color.ink },
+  serverEdit: { minHeight: 44, minWidth: 64, borderRadius: 22, backgroundColor: color.accentTint, alignItems: 'center', justifyContent: 'center', paddingHorizontal: space.md },
+  serverEditText: { ...type.label, fontSize: 15, color: color.accent },
   form: { gap: space.md, paddingTop: space.md },
   note: { flexDirection: 'row', gap: space.sm + 2, alignItems: 'flex-start', margin: space.lg, padding: space.md - 2, borderRadius: 16, backgroundColor: color.surface },
   noteText: { flex: 1, ...type.caption, fontWeight: '400', color: color.muted },

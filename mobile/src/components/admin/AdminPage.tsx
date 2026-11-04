@@ -25,7 +25,8 @@ export function AdminPage({ title, eyebrow, subtitle, back = false, right, child
   const styles = useStyles(createStyles);
   const { color } = useTheme();
   return (
-    <SafeAreaView style={styles.screen} edges={['top', 'left', 'right']}>
+    // Pages inside the tab bar leave the bottom to the bar; pushed pages sit above the phone's navigation buttons.
+    <SafeAreaView style={styles.screen} edges={back ? ['top', 'left', 'right', 'bottom'] : ['top', 'left', 'right']}>
       <View style={styles.header}>
         {back && (
           <Pressable accessibilityRole="button" accessibilityLabel="Back" onPress={() => router.back()} style={styles.back}>
