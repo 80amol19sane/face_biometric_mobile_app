@@ -55,6 +55,8 @@ The design was reviewed and approved before the build. The app follows the phone
 5. In **Employees**, register each person's face in person (**Register**), then set a PIN if wanted.
 6. Leave admin. The phone is now the kiosk.
 
+The kiosk blanks the screen when nobody has been in front of it for a while (Settings → This phone → sleep after, default 1 minute, or never). The camera keeps looking once a second for a face and wakes the screen when one appears; a tap also wakes it. Nothing is matched or sent while it is blank. Keep the phone plugged in.
+
 Pin the app to the screen (Android *App pinning*) or use device management so visitors cannot leave it; Android cannot lock a phone into one app from inside the app.
 
 ## Project layout
