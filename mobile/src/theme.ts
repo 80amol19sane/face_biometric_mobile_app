@@ -1,6 +1,8 @@
 import { useMemo } from 'react';
 import { StyleSheet, useColorScheme } from 'react-native';
+import { resolveDark } from './lib/appearance';
 import { dark, light, tonesFor, type Palette, type Tone } from './palette';
+import { usePreferences } from './state/preferences';
 
 export type { Palette, Tone };
 
@@ -15,9 +17,10 @@ export const type = {
   caption: { fontSize: 13, lineHeight: 18, fontWeight: '500' },
 } as const;
 
-/** The palette for the phone's current appearance, plus tone pairs built from it. */
+/** The palette for the chosen appearance (System follows the phone), plus tone pairs built from it. */
 export function useTheme() {
-  const dim = useColorScheme() === 'dark';
+  const { theme } = usePreferences();
+  const dim = resolveDark(theme, useColorScheme());
   return useMemo(() => {
     const color = dim ? dark : light;
     return { color, tones: tonesFor(color), dark: dim };

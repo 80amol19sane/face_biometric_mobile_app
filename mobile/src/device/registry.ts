@@ -31,3 +31,9 @@ export function isKeyHardwareBacked(user: string): boolean {
   const alias = keyAlias(user);
   return DeviceKey.hasKey(alias) && DeviceKey.isHardwareBacked(alias);
 }
+
+/** Where this login's signing key lives: 'none' until the first check-in registers this phone. */
+export function keyProtection(user: string): 'hardware' | 'software' | 'none' {
+  if (!DeviceKey.hasKey(keyAlias(user))) return 'none';
+  return isKeyHardwareBacked(user) ? 'hardware' : 'software';
+}

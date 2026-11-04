@@ -4,7 +4,7 @@ import { View } from 'react-native';
 import { ApiError } from '../src/api/http';
 import { myStatus, type MyStatus, type TemplateStatus } from '../src/api/faceBiometric';
 import { pendingFaceCount } from '../src/api/review';
-import { currentUser, logout } from '../src/api/session';
+import { currentUser } from '../src/api/session';
 import { Avatar } from '../src/components/Avatar';
 import { Row, RowGroup } from '../src/components/Row';
 import { Tile } from '../src/components/Tile';
@@ -12,6 +12,7 @@ import { Body, Button, Caption, Heading, IconBadge, Screen, type IconName } from
 import { displayName, greeting } from '../src/lib/names';
 import { punchLines } from '../src/lib/punches';
 import { useSession } from '../src/state/session';
+import { useSignOut } from '../src/state/useSignOut';
 import { radius, space, styleFactory, useStyles, type Tone } from '../src/theme';
 
 interface StatusCopy {
@@ -57,11 +58,7 @@ export default function Home() {
 
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
-  const signOut = async () => {
-    await logout();
-    setUser(null);
-    router.replace('/login');
-  };
+  const signOut = useSignOut();
 
   const copy = STATUS[statusKey(status, noEmployee)];
   const canCheckIn = status?.template === 'Active';
@@ -111,6 +108,7 @@ export default function Home() {
         {canReview && !noEmployee && (
           <Row icon="people-outline" label="Review employee faces" detail="Approve, revoke or enrol" badge={reviewBadge} onPress={() => router.push('/review')} />
         )}
+        <Row icon="settings-outline" label="Settings" onPress={() => router.push('/settings')} />
         <Row icon="log-out-outline" label="Sign out" onPress={signOut} />
       </RowGroup>
     </Screen>

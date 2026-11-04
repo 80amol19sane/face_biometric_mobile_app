@@ -13,6 +13,3 @@ export const CAPTURE_TIMEOUT_MS = 25_000;
 
 /** Longest side of the frame given to the face detector. Full camera photos are slow and add nothing. */
 export const DETECTION_MAX_SIDE = 720;
-
-/** Shows what the detector sees at the top of the camera. Turn off once capture is proven on devices. */
-export const SHOW_DIAGNOSTICS = true;

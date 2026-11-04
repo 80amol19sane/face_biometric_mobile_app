@@ -1,7 +1,8 @@
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { useEffect, useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { CAPTURE_TIMEOUT_MS, SHOW_DIAGNOSTICS } from '../face/config';
+import { CAPTURE_TIMEOUT_MS } from '../face/config';
+import { usePreferences } from '../state/preferences';
 import { challengeMet, CHALLENGE_PROMPTS, pickChallenge } from '../face/liveness';
 import { loadEmbedder } from '../face/embedder';
 import { analysePhoto, embedFace, release } from '../face/pipeline';
@@ -23,6 +24,7 @@ interface Props {
  * It only produces an embedding; it never talks to the server.
  */
 export function FaceCamera({ frames, onEmbedding, onFailure, onCancel }: Props) {
+  const { diagnostics: showDiagnostics } = usePreferences();
   const [permission, requestPermission] = useCameraPermissions();
   const camera = useRef<CameraView>(null);
   const [ready, setReady] = useState(false);
@@ -159,7 +161,7 @@ export function FaceCamera({ frames, onEmbedding, onFailure, onCancel }: Props) 
         prompt={prompt}
         captured={captured}
         frames={frames}
-        diagnostics={SHOW_DIAGNOSTICS ? diagnostics : undefined}
+        diagnostics={showDiagnostics ? diagnostics : undefined}
         onCancel={onCancel}
       />
     </View>
