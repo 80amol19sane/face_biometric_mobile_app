@@ -15,6 +15,7 @@ import { Result } from '../src/components/Result';
 import { Button } from '../src/components/ui';
 import { useFaceCapture, type CaptureStage } from '../src/face/useFaceCapture';
 import { useKioskBoot } from '../src/kiosk/useKioskBoot';
+import { useScreenFocused } from '../src/kiosk/useScreenFocused';
 import { sleepAfterMs } from '../src/lib/sleep';
 import { recordOffline, ScanRefused } from '../src/offline/recorder';
 import { useOfflineSync, useReconnect } from '../src/offline/useOfflineSync';
@@ -88,6 +89,7 @@ type Outcome = { kind: 'punch'; punch: KioskPunch } | { kind: 'queued'; at: Date
 function Ready({ device, config, offline, retry }: { device: string; config: KioskConfig; offline: boolean; retry: () => void }) {
   useOfflineSync(device, !offline);
   useReconnect(offline, retry);
+  const focused = useScreenFocused();
   const [run, setRun] = useState(0);
   const [outcome, setOutcome] = useState<Outcome | null>(null);
   const again = useCallback(() => {
@@ -107,6 +109,8 @@ function Ready({ device, config, offline, retry }: { device: string; config: Kio
     setOutcome(result);
   }, []);
 
+  // Covered by admin or the PIN screen: close the camera (unmount Scan) so they can open it.
+  if (!focused) return <View style={styles.covered} />;
   if (outcome?.kind === 'queued') return <QueuedResult at={outcome.at} seconds={config.return_seconds} onDone={again} />;
   if (outcome?.kind === 'punch') return <PunchResult punch={outcome.punch} seconds={config.return_seconds} onDone={again} />;
   if (outcome?.kind === 'failed') {
@@ -253,6 +257,7 @@ function DiagnosticsLine({ text }: { text: string }) {
 
 const styles = StyleSheet.create({
   fill: { flex: 1 },
+  covered: { flex: 1, backgroundColor: '#0A0F14' },
   diagnostics: {
     fontSize: 11,
     lineHeight: 15,
