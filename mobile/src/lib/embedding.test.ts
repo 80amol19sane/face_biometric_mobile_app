@@ -1,4 +1,4 @@
-import { averageEmbeddings, bytesToBase64, embeddingBytes, l2Normalize } from './embedding';
+import { averageEmbeddings, bytesToBase64, dot, embeddingBytes, embeddingFromBytes, l2Normalize } from './embedding';
 import { roundCoordinate, signingPayload } from './signing';
 
 jest.mock('expo-crypto', () => ({}));
@@ -54,5 +54,30 @@ describe('signing payload', () => {
       nonce: 'n', logType: 'OUT', latitude: null, longitude: null, embeddingDigest: digest,
     });
     expect(payload).toBe(`fb1|n|OUT|||${digest}`);
+  });
+});
+
+describe('embeddingFromBytes', () => {
+  it('reads back what embeddingBytes wrote', () => {
+    const original = Float32Array.from([0.5, -0.25, 1, 0]);
+    expect(Array.from(embeddingFromBytes(embeddingBytes(original)))).toEqual(Array.from(original));
+  });
+
+  it('copes with a view into a larger buffer', () => {
+    const bytes = embeddingBytes(Float32Array.from([0.25, 0.75]));
+    const padded = new Uint8Array(bytes.length + 3);
+    padded.set(bytes, 3);
+    expect(Array.from(embeddingFromBytes(padded.subarray(3)))).toEqual([0.25, 0.75]);
+  });
+});
+
+describe('dot', () => {
+  it('is the cosine of unit vectors', () => {
+    expect(dot(Float32Array.from([1, 0]), Float32Array.from([0, 1]))).toBe(0);
+    expect(dot(Float32Array.from([0.6, 0.8]), Float32Array.from([0.6, 0.8]))).toBeCloseTo(1);
+  });
+
+  it('is zero for different sizes', () => {
+    expect(dot(Float32Array.from([1]), Float32Array.from([1, 0]))).toBe(0);
   });
 });

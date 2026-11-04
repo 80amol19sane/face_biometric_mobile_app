@@ -1,14 +1,20 @@
-import { router } from 'expo-router';
-import { useState } from 'react';
+import { router, useLocalSearchParams } from 'expo-router';
+import { useEffect, useState } from 'react';
 import { ApiError, callMethod, getServerUrl, normaliseServerUrl, saveServerUrl } from '../src/api/http';
 import { Brand } from '../src/components/Brand';
 import { Field } from '../src/components/Field';
 import { Body, Button, Screen } from '../src/components/ui';
 
+/** Add or change the server. `next` is where to go afterwards; the kiosk screen by default. */
 export default function ServerScreen() {
+  const { next } = useLocalSearchParams<{ next?: string }>();
   const [address, setAddress] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    getServerUrl().then((current) => current && setAddress(current.replace('https://', '')));
+  }, []);
 
   const connect = async () => {
     setBusy(true);
@@ -17,7 +23,7 @@ export default function ServerScreen() {
     try {
       await saveServerUrl(normaliseServerUrl(address));
       await callMethod('ping', {}, 'GET');
-      router.replace('/');
+      router.replace(next === '/admin/login' ? '/admin/login' : '/');
     } catch (e) {
       if (previous) await saveServerUrl(previous);
       setError(e instanceof ApiError ? e.message : 'Enter a valid https:// address, for example hrms.company.com');

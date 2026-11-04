@@ -10,6 +10,14 @@ export function l2Normalize(values: Float32Array): Float32Array {
   return values.map((v) => v / norm);
 }
 
+/** Dot product; the cosine similarity when both are unit vectors, as the face model's are. */
+export function dot(a: Float32Array, b: Float32Array): number {
+  if (a.length !== b.length) return 0;
+  let sum = 0;
+  for (let i = 0; i < a.length; i++) sum += a[i] * b[i];
+  return sum;
+}
+
 /** Mean of several embeddings of one face, re-normalised. Steadier than any single frame. */
 export function averageEmbeddings(embeddings: Float32Array[]): Float32Array {
   if (embeddings.length === 0) throw new Error('No embeddings to average');
@@ -27,6 +35,12 @@ export function embeddingBytes(embedding: Float32Array): Uint8Array<ArrayBuffer>
   const view = new DataView(bytes.buffer);
   embedding.forEach((v, i) => view.setFloat32(i * 4, v, true));
   return bytes;
+}
+
+/** The inverse of embeddingBytes: little-endian float32 values. */
+export function embeddingFromBytes(bytes: Uint8Array): Float32Array {
+  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  return Float32Array.from({ length: Math.floor(bytes.byteLength / 4) }, (_, i) => view.getFloat32(i * 4, true));
 }
 
 export function bytesToBase64(bytes: Uint8Array): string {
