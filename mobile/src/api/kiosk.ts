@@ -3,6 +3,7 @@ import { base64ToBytes } from '../lib/base64';
 import type { ShiftStanding } from '../lib/shift';
 import { sha256Hex, signKiosk, type KioskAction, type LogType } from '../lib/signing';
 import { KIOSK_ALIAS } from '../kiosk/registry';
+import { rememberContact } from '../offline/contact';
 import { callMethod } from './http';
 
 const API = 'face_biometric.api.kiosk';
@@ -16,6 +17,8 @@ export interface KioskConfig {
   return_seconds: number;
   location: string | null;
   label: string | null;
+  offline_enabled: boolean;
+  offline_max_hours: number;
 }
 
 export interface KioskPunch {
@@ -33,10 +36,19 @@ export interface KioskPunch {
 interface Challenge {
   nonce: string;
   expires_in: number;
+  server_time_ms: number;
   config: KioskConfig;
 }
 
-const challenge = (device: string) => callMethod<Challenge>(`${API}.get_challenge`, { device }, 'POST', { guest: true });
+/** Short, so a slow or dead connection moves the kiosk to offline mode instead of keeping people waiting. */
+const KIOSK_TIMEOUT_MS = 8_000;
+
+/** Every answer also refreshes the offline clock anchor and the cached settings. */
+export async function challenge(device: string): Promise<Challenge> {
+  const answer = await callMethod<Challenge>(`${API}.get_challenge`, { device }, 'POST', { guest: true, timeoutMs: KIOSK_TIMEOUT_MS });
+  await rememberContact(answer.server_time_ms, answer.config);
+  return answer;
+}
 
 export async function fetchConfig(device: string): Promise<KioskConfig> {
   return (await challenge(device)).config;

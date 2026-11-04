@@ -35,7 +35,7 @@ export async function callMethod<T>(
   method: string,
   args: Record<string, unknown> = {},
   verb: 'GET' | 'POST' = 'POST',
-  options: { guest?: boolean } = {},
+  options: { guest?: boolean; timeoutMs?: number } = {},
 ): Promise<T> {
   const base = await getServerUrl();
   if (!base) throw new ApiError('Server is not configured', 'server');
@@ -49,15 +49,16 @@ export async function callMethod<T>(
       body: verb === 'POST' ? JSON.stringify(args) : undefined,
     },
     options.guest ? 'omit' : 'include',
+    options.timeoutMs ?? REQUEST_TIMEOUT_MS,
   );
   const body = await response.json().catch(() => ({}));
   if (!response.ok) throw new ApiError(serverMessage(body) ?? `Server error (${response.status})`, 'server', response.status);
   return body.message as T;
 }
 
-async function send(url: string, init: RequestInit, credentials: 'omit' | 'include'): Promise<Response> {
+async function send(url: string, init: RequestInit, credentials: 'omit' | 'include', timeoutMs: number): Promise<Response> {
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
     return await fetch(url, { ...init, credentials, signal: controller.signal });
   } catch {
