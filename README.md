@@ -93,6 +93,16 @@ cd android && ./gradlew assembleRelease -PreactNativeArchitectures=arm64-v8a
 
 Bump `android.versionCode` in `mobile/app.json` for every release. `npm test` runs the unit tests; `npm run typecheck` runs `tsc`.
 
+## Offline attendance
+
+If the kiosk cannot reach the server it keeps working, as a fallback, for face check-ins only. It is off until HR turns it on twice: **Settings → Offline attendance** (everyone) and **Devices → Take attendance offline** (for each kiosk).
+
+- **The phone never decides who someone is.** It keeps no employee faces. It saves the visitor's own scan, encrypted with a key that lives in the phone's secure hardware, and shows "Saved offline". The server matches it when the connection returns, with the same rule as an online check-in.
+- **Dating a scan.** A phone clock can be changed, so each scan is dated from the server's time at the last contact plus the time the phone has run since (a changed clock cannot move that). The server also compares the phone's own clock.
+- **Settling at sync.** Each scan is signed by the kiosk key and quotes the hash of the one before it, so a missing or reordered scan shows. The server then makes the Employee Checkin with the real time, drops repeats within 2 minutes, refuses faces it does not know, and **holds for HR** anything it cannot trust: older than the offline window (72 h by default), a restarted phone, a clock that disagrees, or a broken chain. HR approves or rejects each one under **More → Offline review**, with a note. Unreviewed scans are closed as rejected after the review window (90 days).
+- **Limits.** PIN is not available offline. The result screen says "Saved offline" and cannot name the person or show the shift. A kiosk stops saving scans after the offline window and asks to be connected. Up to 300 scans wait on the phone. Re-registering a phone replaces its key, so connect and send waiting scans first.
+- **Data protection.** No employee data or photos are stored offline; the scan is deleted from the phone when the server settles it; the file is encrypted and excluded from backup; every batch, held reason and HR decision is recorded in the Face Verification Log.
+
 ## Security and privacy
 
 - The kiosk has no user login. Its requests are trusted because an HR admin registered its hardware-backed key; a device id alone is never a credential. Revoke a kiosk under **More → Devices**.
