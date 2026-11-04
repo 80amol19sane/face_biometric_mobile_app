@@ -3,12 +3,14 @@ import { useEffect, useState } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import { ApiError, getServerUrl } from '../src/api/http';
 import { currentUser } from '../src/api/session';
-import { Body, Button, Screen, Title } from '../src/components/ui';
+import { Button } from '../src/components/ui';
+import { Result } from '../src/components/Result';
 import { useSession } from '../src/state/session';
-import { color } from '../src/theme';
+import { useTheme } from '../src/theme';
 
 /** Decides where to start: server address, then login, then home. */
 export default function Boot() {
+  const { color } = useTheme();
   const { setUser } = useSession();
   const [error, setError] = useState<string | null>(null);
   const [attempt, setAttempt] = useState(0);
@@ -34,17 +36,23 @@ export default function Boot() {
 
   if (error) {
     return (
-      <Screen>
-        <Title>Can’t connect</Title>
-        <Body tone="danger">{error}</Body>
-        <Button label="Try again" onPress={() => setAttempt((n) => n + 1)} />
-        <Button label="Change server" variant="secondary" onPress={() => router.replace('/server')} />
-      </Screen>
+      <Result
+        icon="alert-circle"
+        tone="danger"
+        title="Can’t connect"
+        body={error}
+        actions={
+          <>
+            <Button label="Try again" icon="refresh" onPress={() => setAttempt((n) => n + 1)} />
+            <Button label="Change server" variant="ghost" onPress={() => router.replace('/server')} />
+          </>
+        }
+      />
     );
   }
   return (
-    <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-      <ActivityIndicator size="large" color={color.primary} />
+    <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: color.bg }}>
+      <ActivityIndicator size="large" color={color.accent} />
     </View>
   );
 }

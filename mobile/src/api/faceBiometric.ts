@@ -1,3 +1,5 @@
+import type { Punch } from '../lib/punches';
+import type { ShiftStanding } from '../lib/shift';
 import type { LogType } from '../lib/signing';
 import { callMethod } from './http';
 
@@ -7,6 +9,9 @@ export type TemplateStatus = 'Pending' | 'Active' | 'Revoked' | null;
 
 export interface MyStatus {
   template: TemplateStatus;
+  /** Absent on servers older than the punches update. */
+  next_log_type?: LogType;
+  today?: Punch[];
   devices: { name: string; device_label: string | null }[];
 }
 
@@ -14,14 +19,6 @@ export const myStatus = () => callMethod<MyStatus>(`${API}.enrolment.my_status`,
 
 export const registerDevice = (publicKey: string, label: string) =>
   callMethod<{ device: string }>(`${API}.enrolment.register_device`, { public_key: publicKey, label });
-
-export const enrolFace = (device: string, embedding: string, modelVersion: string) =>
-  callMethod<{ status: Exclude<TemplateStatus, null> }>(`${API}.enrolment.enrol_face`, {
-    device,
-    embedding,
-    model_version: modelVersion,
-    consent: true,
-  });
 
 export const getChallenge = (device: string) =>
   callMethod<{ nonce: string; expires_in: number }>(`${API}.checkin.get_challenge`, { device });
@@ -37,7 +34,7 @@ export interface CheckinRequest {
 }
 
 export const submitCheckin = (request: CheckinRequest) =>
-  callMethod<{ name: string; time: string; log_type: LogType }>(`${API}.checkin.check_in`, {
+  callMethod<{ name: string; time: string; log_type: LogType; shift?: ShiftStanding | null }>(`${API}.checkin.check_in`, {
     device: request.device,
     nonce: request.nonce,
     log_type: request.logType,

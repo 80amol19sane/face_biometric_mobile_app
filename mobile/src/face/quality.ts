@@ -18,11 +18,11 @@ export type Rejection =
 
 export type Assessment = { ok: true; face: DetectedFace } | { ok: false; reason: Rejection };
 
-const MIN_FACE_WIDTH_RATIO = 0.3;
-const MAX_CENTRE_OFFSET_RATIO = 0.25;
-const MAX_YAW = 12;
-const MAX_ROLL = 12;
-const MAX_PITCH = 15;
+const MIN_FACE_WIDTH_RATIO = 0.2;
+const MAX_CENTRE_OFFSET_RATIO = 0.35;
+const MAX_YAW = 15;
+const MAX_ROLL = 15;
+const MAX_PITCH = 20;
 const MIN_EYE_OPEN = 0.4;
 
 export const REJECTION_PROMPTS: Record<Rejection, string> = {

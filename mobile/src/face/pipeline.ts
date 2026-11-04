@@ -2,7 +2,7 @@ import FaceDetection from '@react-native-ml-kit/face-detection';
 import { File } from 'expo-file-system';
 import { manipulateAsync, SaveFormat } from 'expo-image-manipulator';
 import { embed } from './embedder';
-import { MODEL_INPUT_SIZE } from './config';
+import { DETECTION_MAX_SIDE, MODEL_INPUT_SIZE } from './config';
 import { faceCropBox, jpegToModelInput } from './preprocess';
 import type { DetectedFace } from './quality';
 
@@ -11,23 +11,29 @@ export interface AnalysedPhoto {
   width: number;
   height: number;
   faces: DetectedFace[];
+  /** Milliseconds spent downscaling and detecting, for the on-screen diagnostics. */
+  ms: number;
 }
 
 /**
- * Bakes the camera's EXIF rotation into the pixels (ML Kit and the crop then agree on
- * coordinates), then looks for faces. Always call release() when done: it deletes the photo.
+ * Downsizes the camera photo (expo-camera has already applied its rotation to the pixels, so the
+ * detector's coordinates and the image size agree), then looks for faces. Always call release()
+ * when done: it deletes the photo.
  */
-export async function analysePhoto(cameraUri: string): Promise<AnalysedPhoto> {
+export async function analysePhoto(cameraUri: string, cameraWidth: number, cameraHeight: number): Promise<AnalysedPhoto> {
+  const started = Date.now();
   try {
-    const upright = await manipulateAsync(cameraUri, [], { format: SaveFormat.JPEG, compress: 1 });
-    const faces = await FaceDetection.detect(upright.uri, {
-      performanceMode: 'accurate',
+    const scale = DETECTION_MAX_SIDE / Math.max(cameraWidth, cameraHeight);
+    const resize = scale < 1 ? { width: Math.round(cameraWidth * scale) } : undefined;
+    const small = await manipulateAsync(cameraUri, resize ? [{ resize }] : [], { format: SaveFormat.JPEG, compress: 0.9 });
+    const faces = await FaceDetection.detect(small.uri, {
+      performanceMode: 'fast',
       classificationMode: 'all',
       landmarkMode: 'none',
       contourMode: 'none',
-      minFaceSize: 0.2,
+      minFaceSize: 0.15,
     });
-    return { uri: upright.uri, width: upright.width, height: upright.height, faces };
+    return { uri: small.uri, width: small.width, height: small.height, faces, ms: Date.now() - started };
   } finally {
     discard(cameraUri);
   }

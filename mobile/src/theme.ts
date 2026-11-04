@@ -1,17 +1,34 @@
-/** 4pt spacing grid and a calm palette; every screen takes its values from here. */
-export const space = { xs: 4, sm: 8, md: 16, lg: 24, xl: 32 } as const;
+import { useMemo } from 'react';
+import { StyleSheet, useColorScheme } from 'react-native';
+import { dark, light, tonesFor, type Palette, type Tone } from './palette';
 
-export const color = {
-  bg: '#F4F6F8',
-  surface: '#FFFFFF',
-  text: '#16202A',
-  muted: '#5B6773',
-  primary: '#1F5FBF',
-  primaryText: '#FFFFFF',
-  success: '#1E7D4F',
-  warning: '#B26A00',
-  danger: '#B3261E',
-  border: '#D5DBE1',
+export type { Palette, Tone };
+
+export const space = { xs: 4, sm: 8, md: 16, lg: 24, xl: 32 } as const;
+export const radius = { sm: 10, md: 16, lg: 24, pill: 999 } as const;
+
+export const type = {
+  display: { fontSize: 28, lineHeight: 34, fontWeight: '700', letterSpacing: -0.3 },
+  title: { fontSize: 22, lineHeight: 28, fontWeight: '700', letterSpacing: -0.2 },
+  body: { fontSize: 16, lineHeight: 24, fontWeight: '400' },
+  label: { fontSize: 15, lineHeight: 20, fontWeight: '600' },
+  caption: { fontSize: 13, lineHeight: 18, fontWeight: '500' },
 } as const;
 
-export const radius = { md: 12, pill: 999 } as const;
+/** The palette for the phone's current appearance, plus tone pairs built from it. */
+export function useTheme() {
+  const dim = useColorScheme() === 'dark';
+  return useMemo(() => {
+    const color = dim ? dark : light;
+    return { color, tones: tonesFor(color), dark: dim };
+  }, [dim]);
+}
+
+/** Gives a palette-dependent style factory the same literal typing as StyleSheet.create. */
+export const styleFactory = <T extends StyleSheet.NamedStyles<T>>(make: (color: Palette) => T) => make;
+
+/** Styles that depend on the palette. Pass a module-level factory so the sheet is built once per appearance. */
+export function useStyles<T extends StyleSheet.NamedStyles<T>>(make: (color: Palette) => T): T {
+  const { color } = useTheme();
+  return useMemo(() => StyleSheet.create(make(color)), [make, color]);
+}
