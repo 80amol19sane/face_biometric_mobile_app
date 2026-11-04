@@ -17,7 +17,7 @@ export default function OfflineReview() {
 
   return (
     <AdminPage title="Offline review" back error={error} refreshing={loading && !!data} onRefresh={reload}>
-      <Body>Each scan below was taken while a kiosk had no internet. The server recognised the person but something about the scan needs a human decision, such as an old time or a restarted phone.</Body>
+      <Body>Each scan below was taken while a kiosk had no internet. Either the server matched the person but something about the scan needs a decision, such as an old time or a restarted phone, or the face was only a close match. For a close match, check who it was before you approve.</Body>
       {data?.map((scan) => <HeldCard key={scan.name} scan={scan} onDecided={reload} />)}
       {data && data.length === 0 && (
         <View style={styles.empty}>
@@ -34,6 +34,7 @@ function HeldCard({ scan, onDecided }: { scan: HeldScan; onDecided: () => void }
   const [note, setNote] = useState('');
   const [busy, setBusy] = useState(false);
   const when = parseSiteTime(scan.recorded_at);
+  const closest = !!scan.detail?.startsWith('Closest match only');
 
   const decide = async (approve: boolean) => {
     setBusy(true);
@@ -52,6 +53,7 @@ function HeldCard({ scan, onDecided }: { scan: HeldScan; onDecided: () => void }
       <View style={styles.who}>
         <Avatar name={scan.employee_name ?? scan.employee} size={44} />
         <View style={styles.flex}>
+          {closest ? <Caption>Closest match, not confirmed</Caption> : null}
           <Text style={styles.name}>{scan.employee_name ?? scan.employee}</Text>
           <Caption>
             {scan.employee} · {formatShortDate(when)}, {formatClock(when)}

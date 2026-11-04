@@ -58,6 +58,7 @@ export default function Settings() {
           <Group title="OFFLINE ATTENDANCE">
             <SettingRow label="Offline attendance" hint="Kiosks save face scans without internet; the server checks them later" value={yesNo(data.offline_enabled)} />
             <SettingRow label="Offline window" hint="Older scans are held for HR" value={`${data.offline_max_hours} h`} />
+            <SettingRow label="Close-match review from" hint="Offline scans at or above this similarity, but under the match threshold, are held for HR" value={data.offline_review_floor.toFixed(2)} />
             <SettingRow label="Review window" hint="Unreviewed scans are then closed as rejected" value={`${data.held_retention_days} days`} />
           </Group>
           <Caption>These rules are shared by every kiosk. They can only be changed in the Frappe desk, under Face Biometric Settings, so no single phone can alter them.</Caption>

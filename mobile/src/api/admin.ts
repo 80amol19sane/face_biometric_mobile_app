@@ -127,6 +127,7 @@ export interface AdminSettings {
   offline_enabled: number;
   offline_max_hours: number;
   held_retention_days: number;
+  offline_review_floor: number;
   offline_clock_tolerance_minutes: number;
   match_threshold: number;
   identify_margin: number;
