@@ -7,6 +7,7 @@ import { dashboard } from '../../src/api/admin';
 import { ApiError, getServerUrl } from '../../src/api/http';
 import { login, logout } from '../../src/api/session';
 import { Field } from '../../src/components/Field';
+import { KeyboardFrame, KeyboardScroll } from '../../src/components/KeyboardFrame';
 import { Body, Button, Pill } from '../../src/components/ui';
 import { useSession } from '../../src/state/session';
 import { space, styleFactory, type, useStyles, useTheme } from '../../src/theme';
@@ -53,6 +54,8 @@ export default function AdminLogin() {
 
   return (
     <SafeAreaView style={styles.screen}>
+      <KeyboardFrame>
+      <KeyboardScroll>
       <View style={styles.top}>
         <Pressable accessibilityRole="button" accessibilityLabel="Back to attendance" onPress={() => router.replace('/')} style={styles.back}>
           <Ionicons name="arrow-back" size={22} color={color.ink} />
@@ -89,6 +92,8 @@ export default function AdminLogin() {
         <Ionicons name="lock-closed-outline" size={20} color={color.accent} />
         <Text style={styles.noteText}>Sign in with your Frappe account. Only HR Manager and System Manager roles can enter. The session ends after 5 minutes without use, and this kiosk never keeps it.</Text>
       </View>
+      </KeyboardScroll>
+      </KeyboardFrame>
     </SafeAreaView>
   );
 }
@@ -98,7 +103,7 @@ const createStyles = styleFactory((color) => ({
   top: { flexDirection: 'row', alignItems: 'center', gap: space.md, padding: space.md },
   back: { width: 48, height: 48, borderRadius: 24, backgroundColor: color.surface, alignItems: 'center', justifyContent: 'center' },
   backLabel: { ...type.body, color: color.muted },
-  body: { flex: 1, padding: space.lg, gap: space.md },
+  body: { padding: space.lg, gap: space.md },
   mark: { width: 60, height: 60, borderRadius: 16, backgroundColor: color.accent, alignItems: 'center', justifyContent: 'center' },
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: space.sm + 2, flexWrap: 'wrap' },
   title: { fontSize: 28, lineHeight: 34, fontWeight: '700', letterSpacing: -0.3, color: color.ink },
@@ -109,6 +114,6 @@ const createStyles = styleFactory((color) => ({
   serverEdit: { minHeight: 44, minWidth: 64, borderRadius: 22, backgroundColor: color.accentTint, alignItems: 'center', justifyContent: 'center', paddingHorizontal: space.md },
   serverEditText: { ...type.label, fontSize: 15, color: color.accent },
   form: { gap: space.md, paddingTop: space.md },
-  note: { flexDirection: 'row', gap: space.sm + 2, alignItems: 'flex-start', margin: space.lg, padding: space.md - 2, borderRadius: 16, backgroundColor: color.surface },
+  note: { flexDirection: 'row', gap: space.sm + 2, alignItems: 'flex-start', marginHorizontal: space.lg, marginTop: 'auto', marginBottom: space.lg, padding: space.md - 2, borderRadius: 16, backgroundColor: color.surface },
   noteText: { flex: 1, ...type.caption, fontWeight: '400', color: color.muted },
 }));

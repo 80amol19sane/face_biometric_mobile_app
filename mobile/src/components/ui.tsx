@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import type { ComponentProps, ReactNode } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { KeyboardFrame } from './KeyboardFrame';
 import { radius, space, type, useStyles, useTheme, type Palette, type Tone, styleFactory } from '../theme';
 
 export type IconName = ComponentProps<typeof Ionicons>['name'];
@@ -16,10 +17,12 @@ export function Screen({ children, footer }: ScreenProps) {
   const styles = useStyles(createStyles);
   return (
     <SafeAreaView style={styles.screen}>
-      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-        {children}
-      </ScrollView>
-      {footer && <View style={styles.footer}>{footer}</View>}
+      <KeyboardFrame>
+        <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag">
+          {children}
+        </ScrollView>
+        {footer && <View style={styles.footer}>{footer}</View>}
+      </KeyboardFrame>
     </SafeAreaView>
   );
 }

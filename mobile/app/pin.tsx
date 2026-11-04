@@ -13,6 +13,7 @@ import { PunchResult } from '../src/components/kiosk/PunchResult';
 import { Result } from '../src/components/Result';
 import { Button, Caption } from '../src/components/ui';
 import { Avatar } from '../src/components/Avatar';
+import { KeyboardFrame, KeyboardScroll } from '../src/components/KeyboardFrame';
 import { backspace, canVerify, dotStates, pressDigit } from '../src/lib/pinEntry';
 import { useKioskBoot } from '../src/kiosk/useKioskBoot';
 import { radius, space, styleFactory, type, useStyles, useTheme } from '../src/theme';
@@ -126,7 +127,9 @@ function EmployeeId({ device, onBack, onFound }: { device: string; onBack: () =>
 
   return (
     <SafeAreaView style={styles.screen}>
+      <KeyboardFrame>
       <Header onBack={onBack} />
+      <KeyboardScroll>
       <View style={styles.body}>
         <Text style={styles.title}>Who is checking in?</Text>
         <Caption>Enter your employee ID.</Caption>
@@ -157,10 +160,12 @@ function EmployeeId({ device, onBack, onFound }: { device: string; onBack: () =>
         {error ? <Text style={styles.error}>{error}</Text> : null}
         <Caption>Only your name is shown here. Other details appear after your PIN is verified.</Caption>
       </View>
+      </KeyboardScroll>
       <View style={styles.footer}>
         {found ? <Button label="Continue" onPress={() => onFound(found.employee, found.employee_name)} /> : <Button label="Find me" busy={busy} disabled={!value.trim()} onPress={check} />}
         <Button label="Use face instead" variant="ghost" onPress={onBack} />
       </View>
+      </KeyboardFrame>
     </SafeAreaView>
   );
 }
@@ -179,6 +184,7 @@ function Keypad({ employee, employeeName, config, onBack, onVerify }: { employee
   return (
     <SafeAreaView style={styles.screen}>
       <Header onBack={onBack} />
+      <KeyboardScroll>
       <View style={styles.keypadTop}>
         <View style={styles.chip}>
           <Avatar name={employeeName} size={36} />
@@ -206,6 +212,7 @@ function Keypad({ employee, employeeName, config, onBack, onVerify }: { employee
           </Pressable>
         ))}
       </View>
+      </KeyboardScroll>
       <View style={styles.footer}>
         <Button label="Verify PIN" disabled={!canVerify(digits, config.pin_min_length)} onPress={() => onVerify(digits)} />
         <Caption>A photo is taken as proof when you verify. HR keeps it for a limited time.</Caption>
@@ -280,7 +287,7 @@ const createStyles = styleFactory((color) => ({
   header: { flexDirection: 'row', alignItems: 'center', gap: space.md, padding: space.md },
   back: { width: 48, height: 48, borderRadius: 24, backgroundColor: color.surface, alignItems: 'center', justifyContent: 'center' },
   eyebrow: { ...type.caption, fontWeight: '700', letterSpacing: 1.8, color: color.accent },
-  body: { flex: 1, paddingHorizontal: space.lg, gap: space.md, paddingTop: space.md },
+  body: { paddingHorizontal: space.lg, gap: space.md, paddingTop: space.md },
   title: { fontSize: 28, lineHeight: 34, fontWeight: '700', letterSpacing: -0.3, color: color.ink },
   input: { minHeight: 58, borderRadius: radius.md, borderWidth: 2, borderColor: color.accent, backgroundColor: color.surface, color: color.ink, fontSize: 20, paddingHorizontal: space.md },
   confirm: { flexDirection: 'row', alignItems: 'center', gap: space.md, padding: space.md, borderRadius: 20, backgroundColor: color.surface },

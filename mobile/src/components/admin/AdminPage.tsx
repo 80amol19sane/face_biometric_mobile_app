@@ -5,6 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { space, styleFactory, type, useStyles, useTheme } from '../../theme';
 import { Body } from '../ui';
+import { KeyboardFrame } from '../KeyboardFrame';
 
 interface AdminPageProps {
   title: string;
@@ -27,6 +28,7 @@ export function AdminPage({ title, eyebrow, subtitle, back = false, right, child
   return (
     // Pages inside the tab bar leave the bottom to the bar; pushed pages sit above the phone's navigation buttons.
     <SafeAreaView style={styles.screen} edges={back ? ['top', 'left', 'right', 'bottom'] : ['top', 'left', 'right']}>
+      <KeyboardFrame>
       <View style={styles.header}>
         {back && (
           <Pressable accessibilityRole="button" accessibilityLabel="Back" onPress={() => router.back()} style={styles.back}>
@@ -43,12 +45,14 @@ export function AdminPage({ title, eyebrow, subtitle, back = false, right, child
       <ScrollView
         contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
         refreshControl={onRefresh ? <RefreshControl refreshing={refreshing} onRefresh={onRefresh} /> : undefined}
       >
         {error ? <Body tone="danger">{error}</Body> : null}
         {children}
       </ScrollView>
       {footer ? <View style={styles.footer}>{footer}</View> : null}
+      </KeyboardFrame>
     </SafeAreaView>
   );
 }
