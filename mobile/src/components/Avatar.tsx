@@ -5,12 +5,12 @@ export function Avatar({ name, size = 44 }: { name: string; size?: number }) {
   const styles = useStyles(createStyles);
   return (
     <View style={[styles.circle, { width: size, height: size, borderRadius: size / 2 }]}>
-      <Text style={[styles.initials, { fontSize: size * 0.38 }]}>{initials(name)}</Text>
+      <Text style={[styles.initials, { fontSize: size * 0.38 }]}>{initialsOf(name)}</Text>
     </View>
   );
 }
 
-function initials(name: string): string {
+export function initialsOf(name: string): string {
   const words = name.trim().split(/\s+/).filter(Boolean);
   return ((words[0]?.[0] ?? '?') + (words.length > 1 ? words[words.length - 1][0] : '')).toUpperCase();
 }

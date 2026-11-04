@@ -1,16 +1,5 @@
 import { ApiError, callMethod, getServerUrl } from './http';
 
-/** The logged-in Frappe user, or null when there is no live session (Frappe reports "Guest"). */
-export async function currentUser(): Promise<string | null> {
-  try {
-    const user = await callMethod<string>('frappe.auth.get_logged_user', {}, 'GET');
-    return user && user !== 'Guest' ? user : null;
-  } catch (error) {
-    if (error instanceof ApiError && error.kind === 'server') return null;
-    throw error;
-  }
-}
-
 export async function login(username: string, password: string): Promise<void> {
   const base = await getServerUrl();
   if (!base) throw new ApiError('Server is not configured', 'server');

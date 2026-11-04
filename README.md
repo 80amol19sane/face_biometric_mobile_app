@@ -1,27 +1,77 @@
 # Face Attendance (mobile)
 
-Android app for the `face_biometric` Frappe app. An employee enrols their face on their own phone,
-HR approves it, and from then on they punch IN/OUT with a face check.
+An Android app that turns a phone into a **shared attendance kiosk** for the `face_biometric` Frappe app, with a
+protected **admin mode** for HR. Employees punch IN and OUT by face or by PIN, with no login. It replaces
+traditional biometric devices at the office entrance.
 
-## How a check-in is verified
+```
+Employee mode (default screen)            Admin mode (HR Manager / System Manager)
+─────────────────────────────             ───────────────────────────────────────
+Walk up → face is found → liveness        Sign in with a Frappe account
+  → matched → "Good morning, Deepak"      Overview: counts, today's attendance
+Or: PIN → employee ID → keypad            Employees: search, register / update face,
+  → proof photo → recorded                  set / reset / disable PIN
+Returns to the camera on its own          Logs, failed attempts, devices, sync, settings
+```
 
-1. **Liveness** – the app asks for a random action (turn your head, or smile) that a still photo cannot do.
-2. **Embedding on the phone** – ML Kit finds the face, the crop goes through MobileFaceNet (TFLite) and
-   yields a 192-value vector. No photo ever leaves the phone, and none is kept.
-3. **Device signature** – the phone holds an ECDSA P-256 key in the Android Keystore (StrongBox when
-   available). It signs `fb1|nonce|IN|lat|lon|sha256(embedding)`.
-4. **Server** – checks the one-time nonce, the signature against the key registered for that employee,
-   then the cosine similarity against the approved template. The time is the server's, not the phone's.
+## Screens
+
+| Area | Screen | Route |
+| --- | --- | --- |
+| Employee | Kiosk: camera, face frame, liveness, result, not recognised | `/` |
+| Employee | PIN: employee ID, keypad, proof photo, result | `/pin` |
+| Admin | Sign in (role-checked) | `/admin/login` |
+| Admin | Overview · Employees · Logs · More (tabs) | `/admin` |
+| Admin | Employee profile, face register / update, PIN set / reset / disable, biometric history | `/admin/employee/[id]`, `register/[id]`, `pin/[id]`, `history/[id]` |
+| Admin | Failed attempts, devices (register this phone as a kiosk), sync status, settings | `/admin/failed`, `devices`, `sync`, `settings` |
+
+The design was reviewed and approved before the build. The app follows the phone's light or dark setting; admin can override it in Settings.
+
+## How attendance is verified
+
+**Face punch (no photo leaves the phone)**
+
+1. The kiosk waits for exactly one face, asks for a random action (turn your head or smile), then takes a straight-on frame.
+2. ML Kit finds the face and MobileFaceNet (TFLite) turns the crop into a 192-value vector on the phone.
+3. The kiosk asks the server for a one-time nonce, then sends the vector with an **ECDSA P-256 signature** made by the kiosk's
+   Android Keystore key over `fb2|identify|device|nonce|sha256(vector)`.
+4. The server checks the nonce and signature, compares the vector with every enrolled face, and accepts only a match above the
+   threshold that also **beats the runner-up by a margin**. It punches the right person IN or OUT using the server's clock.
+
+**PIN punch (with proof)**
+
+1. The person enters their employee ID; the kiosk shows only their name to confirm.
+2. They enter a 4–6 digit PIN, then a proof photo is taken.
+3. The server verifies a salted hash of the PIN. Every wrong ID or PIN returns the same message at the same cost. Five wrong
+   tries lock that employee for 15 minutes; five failures in a minute pause the kiosk for a minute.
+4. The photo is stored privately against the punch and deleted automatically after the retention period (default 30 days).
+
+## First-time setup
+
+1. Install the `face_biometric` app on the site and run `bench migrate`. Set **Face Biometric Settings → Embedding Model** to `mobilefacenet-v1`.
+2. Install the APK on the phone that will be the kiosk. Enter the site address (https only).
+3. Tap the **shield icon**, sign in as an **HR Manager** or **System Manager**.
+4. **More → Devices → Register this phone as a kiosk.** The phone creates a signing key and the server trusts it from now on.
+5. In **Employees**, register each person's face in person (**Register**), then set a PIN if wanted.
+6. Leave admin. The phone is now the kiosk.
+
+The kiosk blanks the screen when nobody has been in front of it for a while (Settings → This phone → sleep after, default 1 minute, or never). The camera keeps looking once a second for a face and wakes the screen when one appears; a tap also wakes it. Nothing is matched or sent while it is blank. Keep the phone plugged in.
+
+Pin the app to the screen (Android *App pinning*) or use device management so visitors cannot leave it; Android cannot lock a phone into one app from inside the app.
+
+## Project layout
 
 ```
 mobile/
-  app/                  expo-router screens: server, login, home, enrol, checkin
-  src/api/              Frappe client (cookie session) and face_biometric.api.* calls
-  src/face/             detection, quality gate, liveness, crop, TFLite embedding
-  src/lib/              embedding wire format and signing payload (unit-tested against the backend format)
-  src/device/           per-login key and Biometric Device registration
+  app/                  expo-router screens (index = kiosk, pin, server, admin/*)
+  src/api/              Frappe client, kiosk calls (signed, guest) and admin calls (cookie session)
+  src/face/             detection, quality gate, liveness, crop, TFLite embedding, useFaceCapture hook
+  src/kiosk/            kiosk key registration and boot checks
+  src/lib/              wire formats, signing payloads, PIN keypad rules, clock, dates (unit-tested)
+  src/components/       kiosk chrome and sheets, admin page frame, shared UI
   modules/device-key/   Kotlin Expo module over the Android Keystore
-  plugins/              config plugin: release signing from environment variables
+  modules/model-asset/  copies the face model out of the APK so TFLite can load it
+  plugins/              config plugins: release signing, model asset
 scripts/fetch-model.sh  downloads the face model (not committed; see Licensing)
 ```
 
@@ -37,31 +87,30 @@ npx expo prebuild --platform android --clean
 # Release signing: keep the keystore OUTSIDE the repo
 export FB_KEYSTORE_PATH=... FB_KEYSTORE_PASSWORD=... FB_KEY_ALIAS=... FB_KEY_PASSWORD=...
 echo "sdk.dir=$ANDROID_HOME" > android/local.properties
-cd android && ./gradlew assembleRelease
+cd android && ./gradlew assembleRelease -PreactNativeArchitectures=arm64-v8a
 # -> mobile/android/app/build/outputs/apk/release/app-release.apk
 ```
 
-`npm test` runs the unit tests; `npm run typecheck` runs `tsc`.
+Bump `android.versionCode` in `mobile/app.json` for every release. `npm test` runs the unit tests; `npm run typecheck` runs `tsc`.
 
-## Backend requirements
+## Security and privacy
 
-- `face_biometric` installed on the site, **Face Biometric Settings → Embedding Model** = `mobilefacenet-v1`.
-- The employee's login must be linked to an Active Employee (`Employee.user_id`).
-- The site must be served over **https** (the app refuses plain http).
-- Enrolment stays *Pending* until HR approves the Face Template (unless approval is switched off in settings).
+- The kiosk has no user login. Its requests are trusted because an HR admin registered its hardware-backed key; a device id alone is never a credential. Revoke a kiosk under **More → Devices**.
+- Admin sessions end after 5 minutes without use and as soon as the app goes to the background. The kiosk never keeps an admin cookie.
+- Face templates are numbers, encrypted on the server. PINs are stored as salted hashes and cannot be read back. Proof photos are private files with automatic deletion.
+- Face enrolment is HR-only; nobody can enrol or change their own face or PIN.
 
 ## Licensing: read before shipping
 
-The development model comes from a public GitHub repository that publishes **no licence**, so it is
-fetched at build time and not redistributed here. Before a real rollout, replace it with a model you
-are licensed to use and change `MODEL_VERSION` in `mobile/src/face/config.ts` together with the
-backend setting. Templates from different models are not comparable, so everyone must re-enrol.
+The development model comes from a public GitHub repository that publishes **no licence**, so it is fetched at build time and not
+redistributed here. Before a real rollout, replace it with a model you are licensed to use and change `MODEL_VERSION` in
+`mobile/src/face/config.ts` together with the backend setting. Templates from different models are not comparable, so everyone must re-enrol.
 
 ## Known limits
 
-- Liveness is a challenge-response check, not a certified presentation-attack detector; a replayed
-  video of the right action can pass.
-- The face is cropped by bounding box, not landmark-aligned. Tune *Match Threshold* from the
-  *Face Verification Log* similarities after real use.
+- Liveness is a challenge-response check, not a certified presentation-attack detector; a replayed video of the right action can pass.
+  On a walk-up kiosk this matters more than on a personal phone. A passive anti-spoof model is the recommended next step.
+- The face is cropped by bounding box, not landmark-aligned. Tune **Match threshold** from *Failed attempts* and the *Face Verification Log* after real use.
+- The kiosk needs a connection; it does not queue punches offline.
 - Android only. iOS needs a Secure Enclave version of `modules/device-key`.
-- This is a per-employee phone design. A shared kiosk would need new backend endpoints.
+- PIN attendance is weaker than a face check (it can be shared or watched). The proof photo and lockout are the safeguards.
