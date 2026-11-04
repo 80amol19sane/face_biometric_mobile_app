@@ -1,6 +1,7 @@
 import type { CameraView } from 'expo-camera';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { averageEmbeddings } from '../lib/embedding';
+import { shouldSleep } from '../lib/sleep';
 import { CAPTURE_TIMEOUT_MS } from './config';
 import { loadEmbedder } from './embedder';
 import { challengeMet, CHALLENGE_PROMPTS, pickChallenge } from './liveness';
@@ -11,6 +12,8 @@ import { assessFrontal, assessPlacement, pickSingleFace, REJECTION_PROMPTS } fro
 export type CaptureStage = 'watching' | 'positioning' | 'liveness' | 'capturing';
 
 const WATCH_INTERVAL_MS = 600;
+/** Asleep, a look once a second is enough to notice someone walking up. */
+const SLEEP_INTERVAL_MS = 1000;
 
 interface Options {
   /** Straight-on frames averaged into the result (3 to enrol, 1 to check in). */
@@ -19,6 +22,8 @@ interface Options {
   enabled: boolean;
   /** Kiosk mode: wait for someone to appear, with no time limit, before starting. */
   watch?: boolean;
+  /** Kiosk mode: milliseconds with nobody in view before `asleep` turns on; 0 never sleeps. */
+  sleepAfterMs?: number;
   /** Ask for a head turn or smile first. Defaults to true. */
   requireLiveness?: boolean;
   onEmbedding: (embedding: Float32Array) => void;
@@ -30,15 +35,25 @@ interface Options {
  * then the embedding. It only produces an embedding; it never talks to the server. One run per
  * mount: remount (change the component key) to run it again.
  */
-export function useFaceCapture({ frames, enabled, watch = false, requireLiveness = true, onEmbedding, onFailure }: Options) {
+export function useFaceCapture({ frames, enabled, watch = false, sleepAfterMs = 0, requireLiveness = true, onEmbedding, onFailure }: Options) {
   const camera = useRef<CameraView>(null);
   const [ready, setReady] = useState(false);
   const [prompt, setPrompt] = useState('Getting ready…');
   const [captured, setCaptured] = useState(0);
   const [stage, setStage] = useState<CaptureStage>(watch ? 'watching' : 'liveness');
   const [diagnostics, setDiagnostics] = useState('waiting for camera');
+  const [asleep, setAsleep] = useState(false);
+  const lastSeen = useRef(Date.now());
+  const sleepWait = useRef(sleepAfterMs);
+  sleepWait.current = sleepAfterMs;
   const callbacks = useRef({ onEmbedding, onFailure });
   callbacks.current = { onEmbedding, onFailure };
+
+  /** A tap on the blank screen: show the kiosk again and restart the countdown. */
+  const wake = useCallback(() => {
+    lastSeen.current = Date.now();
+    setAsleep(false);
+  }, []);
 
   // Load the face model now: a broken model should fail at once, and the load hides behind the challenge.
   useEffect(() => {
@@ -71,21 +86,33 @@ export function useFaceCapture({ frames, enabled, watch = false, requireLiveness
       return analysed;
     };
 
-    /** Kiosk: idle until exactly one face is in view. */
+    /** Kiosk: idle until exactly one face is in view; blank the screen when nobody comes for a while. */
     const watchPhase = async () => {
+      let sleeping = false;
+      lastSeen.current = Date.now();
       while (!cancelled) {
         const shot = await snap();
         if (shot) {
           const photo = await look(shot);
           try {
+            if (photo.faces.length > 0) lastSeen.current = Date.now();
             const single = pickSingleFace(photo.faces);
-            if (single.ok) return;
+            if (single.ok) {
+              setAsleep(false);
+              return;
+            }
             setPrompt(single.reason === 'many_faces' ? REJECTION_PROMPTS.many_faces : 'Position your face inside the frame');
           } finally {
             release(photo);
           }
         }
-        await sleep(WATCH_INTERVAL_MS);
+        // A tap can wake the screen between looks, so follow the ref rather than only our own flag.
+        const wanted = shouldSleep(Date.now(), lastSeen.current, sleepWait.current);
+        if (wanted !== sleeping) {
+          sleeping = wanted;
+          setAsleep(wanted);
+        }
+        await sleep(sleeping ? SLEEP_INTERVAL_MS : WATCH_INTERVAL_MS);
       }
     };
 
@@ -162,7 +189,7 @@ export function useFaceCapture({ frames, enabled, watch = false, requireLiveness
     };
   }, [enabled, ready, watch, requireLiveness, frames]);
 
-  return { camera, setReady, prompt, stage, captured, diagnostics };
+  return { camera, setReady, prompt, stage, captured, diagnostics, asleep, wake };
 }
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));

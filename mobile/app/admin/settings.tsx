@@ -13,6 +13,7 @@ import { SettingRow } from '../../src/components/SettingRow';
 import { Caption } from '../../src/components/ui';
 import { getKioskDevice, kioskKeyProtection } from '../../src/kiosk/registry';
 import { THEME_CHOICES, versionLabel } from '../../src/lib/appearance';
+import { SLEEP_CHOICES } from '../../src/lib/sleep';
 import { useLoad } from '../../src/state/useLoad';
 import { usePreferences } from '../../src/state/preferences';
 import { space, styleFactory, type, useStyles, useTheme } from '../../src/theme';
@@ -23,7 +24,7 @@ type Key = keyof Omit<AdminSettings, 'can_edit_recognition'>;
 export default function Settings() {
   const styles = useStyles(createStyles);
   const { color } = useTheme();
-  const { theme, setTheme, diagnostics, setDiagnostics } = usePreferences();
+  const { theme, setTheme, diagnostics, setDiagnostics, sleep, setSleep } = usePreferences();
   const { data, error: loadError, reload } = useLoad(adminSettings);
   const [server, setServer] = useState<string | null>(null);
   const [device, setDevice] = useState<string | null>(null);
@@ -81,6 +82,11 @@ export default function Settings() {
           <Text style={styles.label}>Theme</Text>
           <Segmented label="Theme" options={THEME_CHOICES} value={theme} onChange={setTheme} />
         </View>
+        <View style={styles.pad}>
+          <Text style={styles.label}>Blank the screen when nobody is near</Text>
+          <Segmented label="Sleep after" options={SLEEP_CHOICES} value={sleep} onChange={setSleep} />
+          <Text style={styles.hint}>A face or a tap wakes it. The camera keeps watching while it is blank.</Text>
+        </View>
         <SettingRow label="Show detector info" hint="A line at the top of the camera, for support">
           <Switch value={diagnostics} onValueChange={setDiagnostics} accessibilityLabel="Show detector info" trackColor={{ false: color.line, true: color.accent }} thumbColor={color.surface} />
         </SettingRow>
@@ -118,6 +124,7 @@ function Stepper({ value, step, min, max, format, onChange }: { value: number; s
 const createStyles = styleFactory((color) => ({
   pad: { gap: space.sm, paddingVertical: space.md - 2 },
   label: { ...type.label, fontSize: 16, color: color.ink },
+  hint: { ...type.caption, color: color.muted },
   value: { ...type.label, fontSize: 15, color: color.muted, minWidth: 64, textAlign: 'center' },
   stepper: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   stepBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: color.accentTint, alignItems: 'center', justifyContent: 'center' },

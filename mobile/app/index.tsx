@@ -9,10 +9,12 @@ import { identify, type KioskConfig, type KioskPunch } from '../src/api/kiosk';
 import { CameraNotice, FailSheet, IdleSheet, ScanSheet } from '../src/components/kiosk/KioskSheets';
 import { KioskChrome, type KioskTone } from '../src/components/kiosk/KioskChrome';
 import { PunchResult } from '../src/components/kiosk/PunchResult';
+import { SleepCover } from '../src/components/kiosk/SleepCover';
 import { Result } from '../src/components/Result';
 import { Button } from '../src/components/ui';
 import { useFaceCapture, type CaptureStage } from '../src/face/useFaceCapture';
 import { useKioskBoot } from '../src/kiosk/useKioskBoot';
+import { sleepAfterMs } from '../src/lib/sleep';
 import { usePreferences } from '../src/state/preferences';
 
 const FAIL_RETURN_MS = 20_000;
@@ -90,7 +92,8 @@ function Ready({ device, config }: { device: string; config: KioskConfig }) {
   }, [outcome, again]);
 
   const finish = useCallback((result: Outcome) => {
-    const feedback = result.kind === 'failed' ? Haptics.NotificationFeedbackType.Error : result.punch.shift?.status === 'Late' ? Haptics.NotificationFeedbackType.Warning : Haptics.NotificationFeedbackType.Success;
+    const feedback =
+      result.kind === 'failed' ? Haptics.NotificationFeedbackType.Error : result.punch.shift?.status === 'Late' ? Haptics.NotificationFeedbackType.Warning : Haptics.NotificationFeedbackType.Success;
     Haptics.notificationAsync(feedback).catch(() => {});
     setOutcome(result);
   }, []);
@@ -107,7 +110,7 @@ function Ready({ device, config }: { device: string; config: KioskConfig }) {
 }
 
 function Scan({ device, config, onOutcome }: { device: string; config: KioskConfig; onOutcome: (outcome: Outcome) => void }) {
-  const { diagnostics: showDiagnostics } = usePreferences();
+  const { diagnostics: showDiagnostics, sleep } = usePreferences();
   const [permission, requestPermission] = useCameraPermissions();
   const [matching, setMatching] = useState(false);
   const matchingRef = useRef(false);
@@ -124,12 +127,22 @@ function Scan({ device, config, onOutcome }: { device: string; config: KioskConf
     },
     [device, onOutcome],
   );
-  const onFailure = useCallback((message: string) => onOutcome({ kind: 'failed', title: 'We could not confirm you', pill: 'Not confirmed', message }), [onOutcome]);
+  const onFailure = useCallback(
+    (message: string) =>
+      onOutcome({
+        kind: 'failed',
+        title: 'We could not confirm you',
+        pill: 'Not confirmed',
+        message,
+      }),
+    [onOutcome],
+  );
 
-  const { camera, setReady, prompt, stage, diagnostics } = useFaceCapture({
+  const { camera, setReady, prompt, stage, diagnostics, asleep, wake } = useFaceCapture({
     frames: 1,
     enabled: !!permission?.granted,
     watch: true,
+    sleepAfterMs: sleepAfterMs(sleep),
     requireLiveness: config.require_liveness,
     onEmbedding,
     onFailure,
@@ -144,28 +157,36 @@ function Scan({ device, config, onOutcome }: { device: string; config: KioskConf
   const instruction = matching ? 'Matching…' : watching && prompt === 'Getting ready…' ? 'Position your face inside the frame' : prompt;
 
   return (
-    <KioskChrome
-      tone={tone}
-      pill={pill}
-      instruction={permission?.granted ? instruction : 'Camera access is needed'}
-      onAdmin={goAdmin}
-      camera={
-        permission?.granted ? (
-          <View style={StyleSheet.absoluteFill}>
-            <CameraView ref={camera} style={StyleSheet.absoluteFill} facing="front" onCameraReady={() => setReady(true)} />
-          </View>
-        ) : undefined
-      }
-    >
-      {!permission?.granted ? (
-        <CameraNotice title="Allow the camera" body="The kiosk uses the front camera to recognise employees. No photo is stored for face check-ins." action="Allow camera" onAction={requestPermission} />
-      ) : watching ? (
-        <IdleSheet location={config.label ?? config.location} pinEnabled={config.pin_enabled} onPin={goPin} />
-      ) : (
-        <ScanSheet stage={stage} matching={matching} requireLiveness={config.require_liveness} pinEnabled={config.pin_enabled && !matching} onPin={goPin} />
-      )}
-      {showDiagnostics && permission?.granted ? <DiagnosticsLine text={diagnostics} /> : null}
-    </KioskChrome>
+    <View style={styles.fill}>
+      <KioskChrome
+        tone={tone}
+        pill={pill}
+        instruction={permission?.granted ? instruction : 'Camera access is needed'}
+        onAdmin={goAdmin}
+        camera={
+          permission?.granted ? (
+            <View style={StyleSheet.absoluteFill}>
+              <CameraView ref={camera} style={StyleSheet.absoluteFill} facing="front" onCameraReady={() => setReady(true)} />
+            </View>
+          ) : undefined
+        }
+      >
+        {!permission?.granted ? (
+          <CameraNotice
+            title="Allow the camera"
+            body="The kiosk uses the front camera to recognise employees. No photo is stored for face check-ins."
+            action="Allow camera"
+            onAction={requestPermission}
+          />
+        ) : watching ? (
+          <IdleSheet location={config.label ?? config.location} pinEnabled={config.pin_enabled} onPin={goPin} />
+        ) : (
+          <ScanSheet stage={stage} matching={matching} requireLiveness={config.require_liveness} pinEnabled={config.pin_enabled && !matching} onPin={goPin} />
+        )}
+        {showDiagnostics && permission?.granted ? <DiagnosticsLine text={diagnostics} /> : null}
+      </KioskChrome>
+      {asleep && watching ? <SleepCover onWake={wake} /> : null}
+    </View>
   );
 }
 
@@ -179,11 +200,27 @@ function describe(stage: CaptureStage, matching: boolean): { tone: KioskTone; pi
 /** Turns a server or network error into what the person at the kiosk should read. */
 function failure(error: unknown): Outcome {
   if (error instanceof ApiError && error.kind === 'network') {
-    return { kind: 'failed', title: 'No connection', pill: 'Offline', message: 'The kiosk cannot reach the server. Please try again in a moment.' };
+    return {
+      kind: 'failed',
+      title: 'No connection',
+      pill: 'Offline',
+      message: 'The kiosk cannot reach the server. Please try again in a moment.',
+    };
   }
   const message = error instanceof ApiError ? error.message : 'Something went wrong. Please try again.';
-  if (error instanceof ApiError && error.status === 417) return { kind: 'failed', title: 'Already recorded', pill: 'Already recorded', message };
-  return { kind: 'failed', title: 'We could not recognise you', pill: 'Not recognised', message };
+  if (error instanceof ApiError && error.status === 417)
+    return {
+      kind: 'failed',
+      title: 'Already recorded',
+      pill: 'Already recorded',
+      message,
+    };
+  return {
+    kind: 'failed',
+    title: 'We could not recognise you',
+    pill: 'Not recognised',
+    message,
+  };
 }
 
 function DiagnosticsLine({ text }: { text: string }) {
@@ -191,5 +228,12 @@ function DiagnosticsLine({ text }: { text: string }) {
 }
 
 const styles = StyleSheet.create({
-  diagnostics: { fontSize: 11, lineHeight: 15, fontFamily: 'monospace', color: '#8893A5', textAlign: 'center' },
+  fill: { flex: 1 },
+  diagnostics: {
+    fontSize: 11,
+    lineHeight: 15,
+    fontFamily: 'monospace',
+    color: '#8893A5',
+    textAlign: 'center',
+  },
 });
