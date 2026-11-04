@@ -50,7 +50,7 @@ export function FaceCamera({ frames, onEmbedding, onFailure, onCancel }: Props) 
 
   return (
     <View style={styles.root}>
-      <CameraView ref={camera} style={StyleSheet.absoluteFill} facing="front" onCameraReady={() => setReady(true)} />
+      <CameraView ref={camera} style={StyleSheet.absoluteFill} facing="front" animateShutter={false} onCameraReady={() => setReady(true)} />
       <CaptureOverlay
         phase={phase}
         prompt={prompt}

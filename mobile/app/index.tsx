@@ -166,7 +166,7 @@ function Scan({ device, config, onOutcome }: { device: string; config: KioskConf
         camera={
           permission?.granted ? (
             <View style={StyleSheet.absoluteFill}>
-              <CameraView ref={camera} style={StyleSheet.absoluteFill} facing="front" onCameraReady={() => setReady(true)} />
+              <CameraView ref={camera} style={StyleSheet.absoluteFill} facing="front" animateShutter={false} onCameraReady={() => setReady(true)} />
             </View>
           ) : undefined
         }
@@ -185,7 +185,7 @@ function Scan({ device, config, onOutcome }: { device: string; config: KioskConf
         )}
         {showDiagnostics && permission?.granted ? <DiagnosticsLine text={diagnostics} /> : null}
       </KioskChrome>
-      {asleep && watching ? <SleepCover onWake={wake} /> : null}
+      <SleepCover visible={asleep && watching} onWake={wake} />
     </View>
   );
 }
